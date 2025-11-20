@@ -7,26 +7,36 @@ import os
 import errno
 import sqlite3
 
+# MODULE IMPORTS
+from modules.database_manager import DatabaseManager
+
 # PRODUCTS CLASS
 class Products:
     
-    # Db variable
-    db_name = r'.\db\database_products.db'
-
     # Constructor
     def __init__(self, window):
-
-        # Call to create_db() function. We need to do that because in run_query function we delete the try-except, so the error happends until someone call this function
-        self.create_db()
-
+        
         # Create the window interface
         self.wind = window
         self.wind.title('Prueba de Products Application')
+        
+        # --DATABASE CONNECTION--
+        
+        # Define absolute path
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(base_dir, 'db', 'inventory_system.db')
+
+        # Instance manager. This creates autommatically the tables.
+        self.db = DatabaseManager(db_path)
 
         # Styles
         style = ttk.Style()
         style.theme_use('alt')
 
+        # -- MAIN INTERFACE GUI --
+        
+        # Main Container 
         frame = LabelFrame(self.wind, text = 'Register a new product')
         frame.grid(
             row = 0,
@@ -47,7 +57,7 @@ class Products:
         self.price = Entry(frame)
         self.price.grid(row=2, column=1, pady=2, padx=5)
 
-        # Button
+        # Save Button
         ttk.Button(
             frame,
             text='Save Product',
@@ -80,7 +90,7 @@ class Products:
         #self.tree.column('#0', width=200, anchor=CENTER)
         #self.tree.column('#1', width=100, anchor=CENTER)
 
-        # Buttons
+        # Delete and Edit Buttons
         ttk.Button(text='DELETE', command=self.delete_product).grid(row=5, column=0, sticky=W)
         ttk.Button(text='EDIT', command=self.edit_product).grid(row=5, column=1, columnspan=2, sticky=W+E)        
     
@@ -102,6 +112,8 @@ class Products:
         # Load data
         self.get_products()
 
+    # -- BUSSINESS LOGIC --
+
     # Search products function
     def search_product(self):
 
@@ -118,7 +130,7 @@ class Products:
         parameters = ('{}'.format(search_term),)
 
         # Run_query
-        db_rows = self.run_query(query, parameters)
+        db_rows = self.db.run_query(query, parameters)
 
         # Clean table
         self.clean_table()
@@ -135,7 +147,8 @@ class Products:
         self.clean_table()
 
         query = 'SELECT * FROM products ORDER BY name DESC'
-        db_rows = self.run_query(query)
+
+        db_rows = self.db.run_query(query) # Actually, we need to include db in the instance because we have it in other script
 
         try:
             for row in db_rows:
@@ -170,7 +183,8 @@ class Products:
         if self.validation():
             
             # Query
-            query = 'INSERT INTO products VALUES(NULL, ?, ?)'
+            # We insert default values in the new columns until create the widgets
+            query = 'INSERT INTO products VALUES(NULL, ?, ?, 0, "No description", 1, 1)'
 
             # NORMALIZE DATA
             # .capitalize(): Turns 'MaNzaNa' into 'Manzana'
@@ -183,7 +197,7 @@ class Products:
             try:
 
                 # Execute run_query
-                self.run_query(query, parameters)
+                self.db.run_query(query, parameters)
 
                 # Get products
                 self.get_products()
@@ -232,7 +246,7 @@ class Products:
                 query = 'DELETE FROM products WHERE name = ?'
 
                 # Execute run_query
-                self.run_query(query,(name,))
+                self.db.run_query(query,(name,))
 
                 # Delete product message
                 self.message['text'] = '{} has been deleted successfully.'.format(name)
@@ -317,7 +331,7 @@ class Products:
         parameters = (new_name, new_price, old_name)
 
         # Execute run_query 
-        self.run_query(query, parameters)
+        self.db.run_query(query, parameters)
 
         # Destroy the update window
         self.edit_wind.destroy()
@@ -328,42 +342,12 @@ class Products:
         # Get products
         self.get_products()
 
-    # Run query function
-    def run_query(self, query, parameters=()):
-        self.message['text']=''
-
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            result = cursor.execute(query, parameters)
-            conn.commit()
-        return result
-
     # Clean table function. This function clean the GUI interface to keep updated the table when we see it. Important: It doesnt clean the table in the database, just clean in the GUI interface.
     def clean_table(self):
         records = self.tree.get_children()
         
         for element in records:
             self.tree.delete(element)
-    
-    # Create database function
-    def create_db(self):
-        try:
-            os.makedirs('db', exist_ok=True) # Crea carpeta si no existe
-            
-            conn = sqlite3.connect(self.db_name)
-            c = conn.cursor()
-            # Añadimos IF NOT EXISTS para evitar errores si se llama dos veces
-            c.execute('''
-            CREATE TABLE IF NOT EXISTS "products" (
-                      "id" INTEGER NOT NULL UNIQUE,
-                      "name" TEXT NOT NULL UNIQUE,
-                      "price" REAL NOT NULL,
-                      PRIMARY KEY("id" AUTOINCREMENT)
-                      )
-            ''')
-            conn.commit()
-        except Exception as e:
-            print("Database check error:", e)
 
     # Item selected function
     def item_selected(self, event):
