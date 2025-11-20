@@ -15,6 +15,11 @@ class Products:
 
     # Constructor
     def __init__(self, window):
+
+        # Call to create_db() function. We need to do that because in run_query function we delete the try-except, so the error happends until someone call this function
+        self.create_db()
+
+        # Create the window interface
         self.wind = window
         self.wind.title('Prueba de Products Application')
 
@@ -79,8 +84,51 @@ class Products:
         ttk.Button(text='DELETE', command=self.delete_product).grid(row=5, column=0, sticky=W)
         ttk.Button(text='EDIT', command=self.edit_product).grid(row=5, column=1, columnspan=2, sticky=W+E)        
     
+        # SEARCH BAR
+        search_frame = LabelFrame(self.wind,text='Search Product')
+        search_frame.grid(row=6, column=0, columnspan=3, pady=10, padx=5, sticky=W+E)
+
+        # Search Label and Entry
+        Label(search_frame,text='Search by Name:').grid(row=0, column=0, padx=5, pady=5)
+        self.search_entry = Entry(search_frame)
+        self.search_entry.grid(row=0,column=1, padx=5, pady=5)
+
+        # Search Button
+        ttk.Button(search_frame,text='Search', command=self.search_product).grid(row=0, column=2, padx=5, pady=5)
+
+        # Reset Button to see all again
+        ttk.Button(search_frame,text='Show all', command=self.get_products).grid(row=0, column=3, padx=5, pady=5)
+
         # Load data
         self.get_products()
+
+    # Search products function
+    def search_product(self):
+
+        # Get the search string
+        search_term = self.search_entry.get()
+
+        # Clean verification message
+        self.message['text'] = ''
+
+        # Query
+        query = 'SELECT * FROM products WHERE name = ?'
+
+        # Parameters
+        parameters = ('{}'.format(search_term),)
+
+        # Run_query
+        db_rows = self.run_query(query, parameters)
+
+        # Clean table
+        self.clean_table()
+
+        # Filling data
+        try:
+            for row in db_rows:
+                self.tree.insert('', 0, text=row[1], values=row[2])
+        except TypeError as te:
+            self.message['text'] = 'No products found matching {}'.format(search_term)
 
     # Get products function:
     def get_products(self):
@@ -124,22 +172,37 @@ class Products:
             # Query
             query = 'INSERT INTO products VALUES(NULL, ?, ?)'
 
+            # NORMALIZE DATA
+            # .capitalize(): Turns 'MaNzaNa' into 'Manzana'
+
+            name_normalized = self.name.get().capitalize()
+
             # Parameters to use the run_query() function
-            parameters = (self.name.get(), self.price.get())
+            parameters = (name_normalized, self.price.get())
+            
+            try:
 
-            # Execute run_query
-            self.run_query(query, parameters)
+                # Execute run_query
+                self.run_query(query, parameters)
 
-            # Get products
-            self.get_products()
+                # Get products
+                self.get_products()
 
-            # Add product verification
-            self.message['text'] = 'Product {} added successfully.'.format(self.name.get())
+                # Add product verification
+                self.message['text'] = 'Product {} added successfully.'.format(name_normalized)
 
-            # Clean Entries
-            self.name.delete(0, END)
-            self.price.delete(0, END)
+                # Clean Entries
+                self.name.delete(0, END)
+                self.price.delete(0, END)
+            except sqlite3.IntegrityError as e:
 
+                # This code only executes if the UNIQUE fails.
+                self.message['text'] = 'Product {} already exists (Database Error).'.format(name_normalized)
+
+                # Clean Entries
+                self.name.delete(0, END)
+                self.price.delete(0, END)
+                
     # Delete product function
     def delete_product(self):
         try:
@@ -158,7 +221,7 @@ class Products:
             # Get name item selected
             name = self.tree.item(self.tree.selection())['text']
             
-            # NEW CODE: DELETE CONFIRMATION
+            #DELETE CONFIRMATION
             # askyesno return True (Yes) or False (No)
 
             question = messagebox.askyesno('Confirm Delete','Are you sure you want to delete {}'.format(name))
@@ -269,17 +332,13 @@ class Products:
     def run_query(self, query, parameters=()):
         self.message['text']=''
 
-        try:
-            with sqlite3.connect(self.db_name) as conn:
-                cursor = conn.cursor()
-                result = cursor.execute(query, parameters)
-                conn.commit()
-            return result
-        except sqlite3.Error as error:
-            print(error)
-            self.create_db()
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            result = cursor.execute(query, parameters)
+            conn.commit()
+        return result
 
-    # Clean db function
+    # Clean table function. This function clean the GUI interface to keep updated the table when we see it. Important: It doesnt clean the table in the database, just clean in the GUI interface.
     def clean_table(self):
         records = self.tree.get_children()
         
@@ -288,28 +347,23 @@ class Products:
     
     # Create database function
     def create_db(self):
-        self.message['text']=''
-
         try:
-            os.mkdir('db')
-        except OSError as ose:
-            print('The directory already exists.')
-            if ose.errno != errno.EEXIST:
-                raise
-        
-        # Connect to the db
-        conn = sqlite3.connect(self.db_name)
-        c = conn.cursor()
-        c.execute('''
-        CREATE TABLE "products" (
-                  "id" INTEGER NOT NULL UNIQUE,
-                  "name" TEXT NOT NULL,
-                  "price" REAL NOT NULL,
-                  PRIMARY KEY("id" AUTOINCREMENT)
-                  )
-        ''')
-        self.message['text']='The table {} has been created successfully'.format(self.tree)
-        conn.commit()
+            os.makedirs('db', exist_ok=True) # Crea carpeta si no existe
+            
+            conn = sqlite3.connect(self.db_name)
+            c = conn.cursor()
+            # Añadimos IF NOT EXISTS para evitar errores si se llama dos veces
+            c.execute('''
+            CREATE TABLE IF NOT EXISTS "products" (
+                      "id" INTEGER NOT NULL UNIQUE,
+                      "name" TEXT NOT NULL UNIQUE,
+                      "price" REAL NOT NULL,
+                      PRIMARY KEY("id" AUTOINCREMENT)
+                      )
+            ''')
+            conn.commit()
+        except Exception as e:
+            print("Database check error:", e)
 
     # Item selected function
     def item_selected(self, event):
