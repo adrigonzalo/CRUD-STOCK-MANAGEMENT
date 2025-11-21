@@ -10,6 +10,7 @@ import sqlite3
 # MODULE IMPORTS
 from modules.database_manager import DatabaseManager
 from modules.product_logic import ProductLogic
+from modules.ui_components import ProductForm, ProductTree, SearchForm
 
 # PRODUCTS CLASS
 class Products:
@@ -40,9 +41,11 @@ class Products:
 
         # -- MAIN INTERFACE GUI --
         
-        # Main Container 
-        frame = LabelFrame(self.wind, text = 'Register a new product')
-        frame.grid(
+        # 1. Main Container.
+        
+        # It is neccesary to use self.logic because the ComboBox need the logic
+        self.form = ProductForm(self.wind, self.logic) 
+        self.form.grid(
             row = 0,
             column = 0,
             columnspan=3,
@@ -50,115 +53,59 @@ class Products:
             padx=5
         )
 
-        # Name Input
-        Label(frame, text='Name:').grid(row=1, column=0)
-        self.name = Entry(frame)
-        self.name.focus()
-        self.name.grid(row=1, column=1)
+        # WE DONT NEED TO ADD ALL THE WIDGETS BECAUSE WE HAVE IT IN THE ui_components.py
 
-        # Price Input
-        Label(frame, text='Price:').grid(row=2, column=0)
-        self.price = Entry(frame)
-        self.price.grid(row=2, column=1, pady=2, padx=5)
-
-        # Categories Combobox
-        Label(frame, text='Category:').grid(row=3, column=0)
-
-        self.combo_category = ttk.Combobox(frame, state='readonly')
-        self.combo_category.grid(row=3, column=1, pady=2, padx=5)
-
-        # Fill Combobox
-        self.combo_category['values'] = self.logic.get_categories()
-
-        # Stock Spinbox
-        Label(frame, text='Stock:').grid(row=4, column=0)
-
-        # from_:0, to=1000 define the range
-        self.spinbox = Spinbox(frame, from_=0, to=1000)
-        self.spinbox.grid(row=4, column=1, pady=2, padx=5)
-
-        # Save Button
-        ttk.Button(
-            frame,
-            text='Save Product',
-            command=self.add_product
-        ).grid(
-            row=5, 
-            columnspan=3, 
-            sticky=W+E, 
-            pady=2, 
-            padx=5
-            )    
+        # Save Button. The style and the positioning are defined in the ui_components.py
+        self.form.save_button.config(command=self.add_product)
 
         # Output message
         self.message = Label(text='', fg='red')
-        self.message.grid(row=6, column=0, columnspan=3, sticky=W + E)
+        self.message.grid(row=1, column=0, columnspan=3, sticky=W + E)
 
-        # Treeview / Table
-        height = 10
-        self.tree = ttk.Treeview(height=height, columns=2, selectmode=BROWSE)
+        # 2. Treeview / Table
+
+        self.tree = ProductTree(self.wind)
 
         # Make interactive table
         self.tree.bind('<<TreeviewSelect>>', self.item_selected)
-        self.tree.grid(row=4, column=0, columnspan=3, pady=2, padx=5)
-
-        # Table Headings
-        self.tree.heading('#0', text='Name', anchor=CENTER)
-        self.tree.heading('#1', text='Price', anchor=CENTER)
-
-        # Adjust width and align
-        #self.tree.column('#0', width=200, anchor=CENTER)
-        #self.tree.column('#1', width=100, anchor=CENTER)
+        self.tree.grid(row=2, column=0, columnspan=3, pady=2, padx=5)
 
         # Delete and Edit Buttons
         ttk.Button(text='DELETE', command=self.delete_product).grid(row=5, column=0, sticky=W)
         ttk.Button(text='EDIT', command=self.edit_product).grid(row=5, column=1, columnspan=2, sticky=W+E)        
     
-        # SEARCH BAR
-        search_frame = LabelFrame(self.wind,text='Search Product')
-        search_frame.grid(row=6, column=0, columnspan=3, pady=10, padx=5, sticky=W+E)
+        # 3. SEARCH BAR
 
-        # Search Label and Entry
-        Label(search_frame,text='Search by Name:').grid(row=0, column=0, padx=5, pady=5)
-        self.search_entry = Entry(search_frame)
-        self.search_entry.grid(row=0,column=1, padx=5, pady=5)
+        self.search_panel = SearchForm(self.wind)
+        self.search_panel.grid(row=4, column=0, columnspan=3, pady=10, padx=5, sticky=W+E)
 
         # Search Button
-        ttk.Button(search_frame,text='Search', command=self.search_product).grid(row=0, column=2, padx=5, pady=5)
+        self.search_panel.btn_search.config(command=self.search_product)
 
         # Reset Button to see all again
-        ttk.Button(search_frame,text='Show all', command=self.get_products).grid(row=0, column=3, padx=5, pady=5)
+        self.search_panel.btn_reset.config(command=self.get_products)
 
         # Load data
         self.get_products()
 
-    # -- BUSSINESS LOGIC --
+    # -- CONTROLLERS: CONNECTING UI EVENTS TO THE BUSSINESS LOGIC --
 
     # Search products function
     def search_product(self):
 
-        # Get the search string
-        search_term = self.search_entry.get()
+        # Get the text from the SearchForm component
+        search_term = self.search_panel.get_search_term()
 
-        # Clean verification message
-        self.message['text'] = ''
-
-        # Query
-        query = 'SELECT * FROM products WHERE name = ?'
-
-        # Parameters
-        parameters = ('{}'.format(search_term),)
-
-        # Run_query
-        db_rows = self.db.run_query(query, parameters)
+        # Use the logic with the terms found in the UI
+        db_rows = self.logic.search_product(search_term)
 
         # Clean table
-        self.clean_table()
+        self.tree.clean_rows()
 
         # Filling data
         try:
             for row in db_rows:
-                self.tree.insert('', 0, text=row[1], values=row[2])
+                self.tree.add_row(row[1],row[2])
         except TypeError as te:
             self.message['text'] = 'No products found matching {}'.format(search_term)
 
@@ -166,23 +113,20 @@ class Products:
     def get_products(self):
         
         # Clean visual table
-        self.clean_table()
+        self.tree.clean_rows()
 
         # Ask for the logic data
         db_rows = self.logic.get_products()
 
-        # Show data
+        # Fill the table with data using their own method add_rows()
         for row in db_rows:
-            self.tree.insert('', 0, text=row[1], values=row[2])
+            self.tree.add_row(name=row[1], price=row[2], stock=row[3], category_id=row[5])
     
     # Add product function
     def add_product(self):
 
         # Collect data from the Interface
-        name = self.name.get()
-        price = self.price.get()
-        stock = self.spinbox.get()
-        category = self.combo_category.get()
+        name, price, stock, category = self.form.get_data()
 
         # Send data to the logic
         success, message = self.logic.add_product(name, price, stock, category)
@@ -192,11 +136,8 @@ class Products:
 
         if success:
 
-            # If it saves well, cleant and reload it
-            self.name.delete(0, END)
-            self.price.delete(0, END)
-            self.spinbox.delete(0, END)
-            self.spinbox.insert(0, 0)
+            # If it saves well, clean and reload it
+            self.form.clear()
             self.get_products()
                 
     # Delete product function
@@ -205,23 +146,17 @@ class Products:
         # Clean verificacion message
         self.message['text'] = ''
         
-        try:
+        # Selected item
+        selected_item = self.tree.get_selected_item()
 
-            # Making sure the product is selected. 
-                # With .tree.item we can query or modify the options for the specified item
-                # With .tree.selection return a tuple of selected items.
-            self.tree.item(self.tree.selection())['text'][0]
-            
-        except IndexError as ie:
-
-            print('Error: ', ie)
+        if not selected_item:
             self.message['text'] = 'Please selected an item.'
 
             # Adding that, we can make sure that you cant try to delete anything in the database if the selection failed.
             return
-
+            
         # Get name item selected
-        name = self.tree.item(self.tree.selection())['text']
+        name = selected_item[0] # (name, price)
         
         # DELETE CONFIRMATION
         # askyesno return True (Yes) or False (No)
@@ -248,52 +183,46 @@ class Products:
         # Clean verification message
         self.message['text']=''
         
-        try:
+        # Selected item
+        selected_item = self.tree.get_selected_item()
+        
+        if not selected_item:
+            self.message['text'] = 'Please selected an item.'
 
-            # Making sure the product is selected. 
-                # With .tree.item we can query or modify the options for the specified item
-                # With .tree.selection return a tuple of selected items.
-            self.tree.item(self.tree.selection())['text'][0]
-
-
-            # Define old_name, old_price variables to get the old value inserted in the table before any change.
-                # We use ['text'] after all the code in old_name variable because the key is asociated with the row[1] and, at the same time, with the hide column #0 which is called "Name" in the table.
-                # We use ['values'][0] after all the code in old_price variable because it contains all the additional columns which it starts with #1, #2... 
-                # row[2] is associated to the values tuple. It has the #1 column values, which it named "Price"
-            old_name = self.tree.item(self.tree.selection())['text']        
-            old_price = self.tree.item(self.tree.selection())['values'][0]
-
-            # Print old variables.
-            print("Old name: ", old_name, "Old_price: ", old_price)
-
-            # Using Tkinter to use an independent window for update a record.
-            self.edit_wind = Toplevel()
-            self.edit_wind.title = 'Edit Product'
-
-            # Old Name
-            Label(self.edit_wind, text='Old Name:').grid(row=0, column=0, padx=10, pady=5)
-            Entry(self.edit_wind, textvariable=StringVar(self.edit_wind, value=old_name), state='readonly').grid(row=0, column=1)
-
-            # New Name
-            Label(self.edit_wind, text='New Name:').grid(row=1, column=0, padx=10, pady=5)
-            new_name = Entry(self.edit_wind)
-            new_name.grid(row=1, column=1, padx=10, pady=5)
-
-            # Old Price
-            Label(self.edit_wind, text='Old Price:').grid(row=2, column=0, padx=10, pady=5)
-            Entry(self.edit_wind, textvariable=StringVar(self.edit_wind, value=old_price), state='readonly').grid(row=2, column=1)
-
-            # New Price
-            Label(self.edit_wind, text='New Price:').grid(row=3, column=0, padx=10, pady=5)
-            new_price = Entry(self.edit_wind)
-            new_price.grid(row=3, column=1, padx=10, pady=5)
-
-            # Update Button
-            Button(self.edit_wind, text='Update', command=lambda: self.edit_records(new_name.get(), new_price.get(), old_name, old_price)).grid(row=4, column=0, columnspan=2, sticky=W+E)
-
-        except IndexError as ie:
-            self.message['text'] = 'Please select a record'
+            # Adding that, we can make sure that you cant try to delete anything in the database if the selection failed.
             return
+            
+        # Get name item selected
+        old_name, old_price = selected_item # (name, price)
+
+        # Print old variables.
+        print("Old name: ", old_name, "Old_price: ", old_price)
+
+        # Using Tkinter to use an independent window for update a record.
+        self.edit_wind = Toplevel()
+        self.edit_wind.title = 'Edit Product'
+
+        # Old Name
+        Label(self.edit_wind, text='Old Name:').grid(row=0, column=0, padx=10, pady=5)
+        Entry(self.edit_wind, textvariable=StringVar(self.edit_wind, value=old_name), state='readonly').grid(row=0, column=1)
+
+        # New Name
+        Label(self.edit_wind, text='New Name:').grid(row=1, column=0, padx=10, pady=5)
+        new_name = Entry(self.edit_wind)
+        new_name.grid(row=1, column=1, padx=10, pady=5)
+
+        # Old Price
+        Label(self.edit_wind, text='Old Price:').grid(row=2, column=0, padx=10, pady=5)
+        Entry(self.edit_wind, textvariable=StringVar(self.edit_wind, value=old_price), state='readonly').grid(row=2, column=1)
+
+        # New Price
+        Label(self.edit_wind, text='New Price:').grid(row=3, column=0, padx=10, pady=5)
+        new_price = Entry(self.edit_wind)
+        new_price.grid(row=3, column=1, padx=10, pady=5)
+
+        # Update Button
+        Button(self.edit_wind, text='Update', command=lambda: self.edit_records(new_name.get(), new_price.get(), old_name, old_price)).grid(row=4, column=0, columnspan=2, sticky=W+E)
+
         
     # Edit records function
     def edit_records(self, new_name, new_price, old_name, old_price):
@@ -328,8 +257,12 @@ class Products:
 
     # Item selected function
     def item_selected(self, event):
-        print(self.tree.item(self.tree.selection())['text'],self.tree.item(self.tree.selection())['values'])
-        self.message['text'] = 'Selected {}'.format(self.tree.item(self.tree.selection()))
+
+        selected = self.tree.get_selected_item()
+
+        if selected:
+
+            self.message['text'] = 'Selected {}'.format(selected[0])
 
 
 # Main Execution Block
