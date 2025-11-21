@@ -9,6 +9,7 @@ import sqlite3
 
 # MODULE IMPORTS
 from modules.database_manager import DatabaseManager
+from modules.product_logic import ProductLogic
 
 # PRODUCTS CLASS
 class Products:
@@ -18,7 +19,7 @@ class Products:
         
         # Create the window interface
         self.wind = window
-        self.wind.title('Prueba de Products Application')
+        self.wind.title('Inventory System')
         
         # --DATABASE CONNECTION--
         
@@ -29,6 +30,9 @@ class Products:
 
         # Instance manager. This creates autommatically the tables.
         self.db = DatabaseManager(db_path)
+
+        # Use the bussiness logic
+        self.logic = ProductLogic(self.db)
 
         # Styles
         style = ttk.Style()
@@ -57,13 +61,29 @@ class Products:
         self.price = Entry(frame)
         self.price.grid(row=2, column=1, pady=2, padx=5)
 
+        # Categories Combobox
+        Label(frame, text='Category:').grid(row=3, column=0)
+
+        self.combo_category = ttk.Combobox(frame, state='readonly')
+        self.combo_category.grid(row=3, column=1, pady=2, padx=5)
+
+        # Fill Combobox
+        self.combo_category['values'] = self.logic.get_categories()
+
+        # Stock Spinbox
+        Label(frame, text='Stock:').grid(row=4, column=0)
+
+        # from_:0, to=1000 define the range
+        self.spinbox = Spinbox(frame, from_=0, to=1000)
+        self.spinbox.grid(row=4, column=1, pady=2, padx=5)
+
         # Save Button
         ttk.Button(
             frame,
             text='Save Product',
             command=self.add_product
         ).grid(
-            row=3, 
+            row=5, 
             columnspan=3, 
             sticky=W+E, 
             pady=2, 
@@ -72,7 +92,7 @@ class Products:
 
         # Output message
         self.message = Label(text='', fg='red')
-        self.message.grid(row=3, column=0, columnspan=3, sticky=W + E)
+        self.message.grid(row=6, column=0, columnspan=3, sticky=W + E)
 
         # Treeview / Table
         height = 10
@@ -144,118 +164,54 @@ class Products:
 
     # Get products function:
     def get_products(self):
+        
+        # Clean visual table
         self.clean_table()
 
-        query = 'SELECT * FROM products ORDER BY name DESC'
+        # Ask for the logic data
+        db_rows = self.logic.get_products()
 
-        db_rows = self.db.run_query(query) # Actually, we need to include db in the instance because we have it in other script
-
-        try:
-            for row in db_rows:
-                self.tree.insert('', 0, text=row[1], values=row[2])
-        except TypeError as te:
-            self.message['text'] = self.message['text'] + '\nThere is not any products.'
-
-    # Validation function
-    def validation(self):
-        # Validate if name or price inputs are not empty
-        if not self.name.get() or not self.price.get():
-            self.message['text'] = 'Name and price inputs are required.'
-        
-        # Validate if price input has a valid number
-        try:
-            price_value = float(self.price.get())
-        except ValueError as ve:
-            print(ve)
-            self.message['text'] = 'Price input must be a valid number.'
-            return False
-        
-        # Validate if price input has a positive value
-        if price_value <= 0:
-            self.message['text'] = "Price input must have a positive value."
-            return False
-        
-        self.message['text'] = ''
-        return True 
+        # Show data
+        for row in db_rows:
+            self.tree.insert('', 0, text=row[1], values=row[2])
     
     # Add product function
     def add_product(self):
-        if self.validation():
-            
-            # Query
-            # We insert default values in the new columns until create the widgets
-            query = 'INSERT INTO products VALUES(NULL, ?, ?, 0, "No description", 1, 1)'
 
-            # NORMALIZE DATA
-            # .capitalize(): Turns 'MaNzaNa' into 'Manzana'
+        # Collect data from the Interface
+        name = self.name.get()
+        price = self.price.get()
+        stock = self.spinbox.get()
+        category = self.combo_category.get()
 
-            name_normalized = self.name.get().capitalize()
+        # Send data to the logic
+        success, message = self.logic.add_product(name, price, stock, category)
 
-            # Parameters to use the run_query() function
-            parameters = (name_normalized, self.price.get())
-            
-            try:
+        # Update Interface
+        self.message['text'] = message
 
-                # Execute run_query
-                self.db.run_query(query, parameters)
+        if success:
 
-                # Get products
-                self.get_products()
-
-                # Add product verification
-                self.message['text'] = 'Product {} added successfully.'.format(name_normalized)
-
-                # Clean Entries
-                self.name.delete(0, END)
-                self.price.delete(0, END)
-            except sqlite3.IntegrityError as e:
-
-                # This code only executes if the UNIQUE fails.
-                self.message['text'] = 'Product {} already exists (Database Error).'.format(name_normalized)
-
-                # Clean Entries
-                self.name.delete(0, END)
-                self.price.delete(0, END)
+            # If it saves well, cleant and reload it
+            self.name.delete(0, END)
+            self.price.delete(0, END)
+            self.spinbox.delete(0, END)
+            self.spinbox.insert(0, 0)
+            self.get_products()
                 
     # Delete product function
     def delete_product(self):
-        try:
 
-            # Clean verificacion message
-            self.message['text'] = ''
+        # Clean verificacion message
+        self.message['text'] = ''
+        
+        try:
 
             # Making sure the product is selected. 
                 # With .tree.item we can query or modify the options for the specified item
                 # With .tree.selection return a tuple of selected items.
             self.tree.item(self.tree.selection())['text'][0]
-
-            # Verificaton message
-            self.message['text'] = ''
             
-            # Get name item selected
-            name = self.tree.item(self.tree.selection())['text']
-            
-            #DELETE CONFIRMATION
-            # askyesno return True (Yes) or False (No)
-
-            question = messagebox.askyesno('Confirm Delete','Are you sure you want to delete {}'.format(name))
-            
-            if question == True:
-
-                # Query
-                query = 'DELETE FROM products WHERE name = ?'
-
-                # Execute run_query
-                self.db.run_query(query,(name,))
-
-                # Delete product message
-                self.message['text'] = '{} has been deleted successfully.'.format(name)
-
-                # Get products
-                self.get_products()
-            else:
-                self.message['text'] = 'Deletion cancelled'
-
         except IndexError as ie:
 
             print('Error: ', ie)
@@ -264,14 +220,35 @@ class Products:
             # Adding that, we can make sure that you cant try to delete anything in the database if the selection failed.
             return
 
+        # Get name item selected
+        name = self.tree.item(self.tree.selection())['text']
+        
+        # DELETE CONFIRMATION
+        # askyesno return True (Yes) or False (No)
+
+        question = messagebox.askyesno('Confirm Delete','Are you sure you want to delete {}'.format(name))
+        
+        if question == True:
+            
+            # Delete Logic 
+            success, message = self.logic.delete_product(name)
+
+            # Update UI
+            self.message['text'] = message
+            if success:
+                self.get_products()
+
+        else:
+            self.message['text'] = 'Deletion cancelled'
+
+
     # Edit product function
     def edit_product(self):
+
         # Clean verification message
         self.message['text']=''
         
         try:
-            # Clean verification message
-            self.message['text']=''
 
             # Making sure the product is selected. 
                 # With .tree.item we can query or modify the options for the specified item
@@ -312,35 +289,35 @@ class Products:
             new_price.grid(row=3, column=1, padx=10, pady=5)
 
             # Update Button
-            Button(self.edit_wind, text='Update', command=lambda: self.edit_records(new_name.get(), new_price.get(), old_name)).grid(row=4, column=0, columnspan=2, sticky=W+E)
+            Button(self.edit_wind, text='Update', command=lambda: self.edit_records(new_name.get(), new_price.get(), old_name, old_price)).grid(row=4, column=0, columnspan=2, sticky=W+E)
 
         except IndexError as ie:
             self.message['text'] = 'Please select a record'
             return
         
     # Edit records function
-    def edit_records(self, new_name, new_price, old_name):
+    def edit_records(self, new_name, new_price, old_name, old_price):
         
         # Print records in the terminal before the update
         print(new_name, new_price, old_name)
 
-        # Update query
-        query = 'UPDATE products SET name = ?, price = ? WHERE name = ?'
+        # UI logic: If the new values are empty, we need to use the old ones.
+        final_name = new_name if new_name else old_name
+        final_price = new_price if new_price else old_price
 
-        # Parameters to the run_query function
-        parameters = (new_name, new_price, old_name)
+        # Logic Call
+        success, message = self.logic.update_product(final_name, final_price, old_name)
 
-        # Execute run_query 
-        self.db.run_query(query, parameters)
-
+        # UI Update
         # Destroy the update window
         self.edit_wind.destroy()
+        self.message['text'] = message
 
-        # Verification message
-        self.message['text'] = '{} has been updated successfully.'.format(new_name)
+        if success:
+            self.get_products()
 
-        # Get products
-        self.get_products()
+            # Verification message
+            self.message['text'] = '{} has been updated successfully.'.format(new_name)
 
     # Clean table function. This function clean the GUI interface to keep updated the table when we see it. Important: It doesnt clean the table in the database, just clean in the GUI interface.
     def clean_table(self):
