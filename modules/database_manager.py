@@ -73,3 +73,57 @@ class DatabaseManager:
             self.run_query('INSERT INTO suppliers (id, name) VALUES (1, "Proveedor Local")')
         except sqlite3.IntegrityError:
             pass
+
+    # Get products function. Return all the products
+    def get_products_db(self):
+
+        query = 'SELECT * FROM products ORDER BY name DESC'
+        return self.run_query(query)
+
+    # Search product function. Search products by name
+    def search_product_db(self, search_term):
+
+        query = 'SELECT * FROM products WHERE name = ?'
+        parameters = ('{}'.format(search_term),) 
+        return self.run_query(query, parameters)
+
+    # Insert product function. Insert a new product
+    def insert_product_db(self, name, price, stock, category_id):
+
+        query = 'INSERT INTO products VALUES(NULL, ?, ?, ?, "No description", ?, 1)'
+        parameters = (name, price, stock, category_id)
+        self.run_query(query, parameters)
+
+    # Delete product function. Delete a product by name
+    def delete_product_db(self, name):
+
+        query = 'DELETE FROM products WHERE name = ?'
+        self.run_query(query, (name,))
+        
+    # Update an existint product function. Update an existing product by name and price.
+    def update_product_db(self, new_name, new_price, old_name):
+
+        query = 'UPDATE products SET name = ?, price = ? WHERE name = ?'
+        parameters = (new_name, new_price, old_name) 
+        self.run_query(query, parameters)
+        
+    # Get category function. Get the category id by name.
+    def get_category_id_by_name_db(self, category_name):
+
+        query_cat = 'SELECT id FROM categories WHERE name = ?'
+        return self.run_query(query_cat, (category_name,))
+    
+    # Get categories function. Return all the categories with the ID and name
+    def get_categories_db(self):
+        query = 'SELECT id, name FROM categories ORDER BY name ASC'
+        return self.run_query(query)
+    
+    # Insert new category function
+    def insert_category_db(self, name):
+        query = 'INSERT INTO categories (name) VALUES (?)'
+        self.run_query(query, (name,))
+
+    # Delete category function. Delete an existing category by name. Return the cursor if anything was deleted.
+    def delete_category_db(self, name):
+        query = 'DELETE FROM categories WHERE name = ?'
+        return self.run_query(query, (name,))

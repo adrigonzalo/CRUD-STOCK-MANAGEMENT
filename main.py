@@ -10,7 +10,7 @@ import sqlite3
 # MODULE IMPORTS
 from modules.database_manager import DatabaseManager
 from modules.product_logic import ProductLogic
-from modules.ui_components import ProductForm, ProductTree, SearchForm
+from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow
 
 # PRODUCTS CLASS
 class Products:
@@ -87,6 +87,9 @@ class Products:
 
         # Load data
         self.get_products()
+
+        # Menubar call
+        self.create_menu_bar()
 
     # -- CONTROLLERS: CONNECTING UI EVENTS TO THE BUSSINESS LOGIC --
 
@@ -264,6 +267,116 @@ class Products:
 
             self.message['text'] = 'Selected {}'.format(selected[0])
 
+# -- CATEGORIES SECTION --
+
+    # Create the menu bar function
+    def create_menu_bar(self):
+        
+        # Create Menu object
+        menubar = Menu(self.wind)
+        self.wind.config(menu=menubar)
+
+        # Create the "Management" Menu (Dropdown)
+        management_menu = Menu(menubar, tearoff=0)
+
+        # Add options in the "Management" Menu
+        management_menu.add_command(label= "Manage Categories", command=self.manage_categories)
+        management_menu.add_command(label= "Manage Proveedores", command=self.manage_suppliers)
+
+        # Add a separator
+        management_menu.add_separator()
+        management_menu.add_command(label='Exit', command=self.wind.quit)
+
+        # Add the drop-down menu to the main bar 
+        menubar.add_cascade(label='Gestion', menu=management_menu)
+        menubar.add_command(label='Help', command=lambda: messagebox.showinfo("Help", "Inventory System"))
+
+    # Manage categories
+    def manage_categories(self):
+        """Category managemente menu Handler."""
+
+        # Avoid open multiple managemente windows
+        if hasattr(self, 'category_wind') and self.cat_window.winfo_exists():
+            self.cat_window.focus()
+            return
+        
+        # -- UI Components
+
+        # 1. Create the window using the UI component
+        self.cat_window = CategoryManagerWindow(self.wind)
+
+        # 2. Connect Buttons (Controller -> UI)
+        self.cat_window.btn_add.config(command=self.add_category_handler)
+        self.cat_window.btn_delete.config(command=self.delete_category_handler)
+
+        # 3. Loading initial data
+        self.get_categories_in_window()
+
+        # 4. Calling the main combobox to refreshing it when the windows has been closed.
+        self.cat_window.protocol('WM_DELETE_WINDOW', self.close_category_window)
+
+
+    # Function to close the category window and refresh the combobox in the main form.
+    def close_category_window(self):
+        self.form.load_categories()
+        self.cat_window.destroy()
+
+    
+    # Function to load the categories in the Treeview of the managemente window.
+    def get_categories_in_window(self):
+
+        # Get the data from the product logic
+        db_rows = self.logic.get_all_categories()
+
+        # Filling Treeview with data
+        self.cat_window.load_tree_data(db_rows)
+
+    
+    # Function to manage the event of add a new category
+    def add_category_handler(self):
+
+        name = self.cat_window.get_name_input()
+
+        # Call the logic from procut_logic.py
+        success, message = self.logic.add_category(name)
+
+        # Update UI
+
+        # Message info
+        self.cat_window.set_message(message)
+
+        if success:
+            self.cat_window.clear_input()
+            self.get_categories_in_window()
+
+    
+    #  Function to manage the event of delete a category
+    def delete_category_handler(self):
+
+        self.cat_window.set_message(message) = ''
+
+        name = self.cat_window.get_selected_category_name()
+
+        if not name:
+            self.cat_window.set_message('Please select a category', 'red')
+            return
+        
+        # Delete Confirmation
+        if messagebox.askyesno('Delete Confirmation', 'Are you sure do you want to delete the category {}?'.format(name)):
+
+            # Call the logic from procut_logic.py
+            success, message = self.logic.delete_category(name)
+
+            # Update UI
+            self.cat_window.set_message(message)
+
+            if success:
+                self.get_categories_in_window()
+
+    def manage_suppliers(self):
+        """Handler para el menú de gestión de proveedores."""
+        # Crearemos aquí la lógica para abrir la ventana Toplevel
+        messagebox.showinfo("Gestión de Proveedores", "Ventana de gestión de proveedores en desarrollo...")
 
 # Main Execution Block
 if __name__ == '__main__':

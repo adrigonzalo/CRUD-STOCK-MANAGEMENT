@@ -16,34 +16,24 @@ class ProductLogic:
     # Search products function
     def search_product(self, search_term):
 
-        # Query
-        query = 'SELECT * FROM products WHERE name = ?'
-
-        # Parameters
-        parameters = ('{}'.format(search_term),)
-
-        return self.db.run_query(query, parameters)
+        # Instead of use the query, we call the function in database manager with the self.db
+        return self.db.search_product_db(search_term)
     
     # Get products function:
     def get_products(self):
 
-        query = 'SELECT * FROM products ORDER BY name DESC'
-
-        return self.db.run_query(query)
+        return self.db.get_products_db()
     
     # Get categories function
     def get_categories(self):
 
-        # Select all the categories
-        query = 'SELECT * FROM categories ORDER BY name DESC'
-
-        db_rows = self.db.run_query(query)
+        db_rows = self.db.get_categories_db()
 
         # For loop to get all the categories
         try:
             categories = []
             for row in db_rows:
-                categories.append(row[0])
+                categories.append(row[1])
         except Exception:
             pass # If it fails return an empty list
 
@@ -81,8 +71,7 @@ class ProductLogic:
         name_normalized = name.capitalize()
         
         # 3. Look for the category_id record in the categories table
-        query_cat = 'SELECT id FROM categories WHERE name = ?'
-        res_cat = self.db.run_query(query_cat,(category_name,))
+        res_cat = self.db.get_category_id_by_name_db(category_name)
         
         try:
 
@@ -93,16 +82,10 @@ class ProductLogic:
             category_id = 1
 
         # 4. Query
-        # We insert default values in the new columns until create the widgets
-        query = 'INSERT INTO products VALUES(NULL, ?, ?, ?, "No description", ?, 1)'
-
-        # Parameters to use the run_query() function
-        parameters = (name_normalized, price, stock, category_id)
-        
         try:
 
-            # Execute run_query
-            self.db.run_query(query, parameters)
+            # Execute insert_product_db from database_manager script
+            self.db.insert_product_db(name_normalized, price, stock, category_id)
             return True, 'Product {} added successfully.'.format(name_normalized)
 
         except sqlite3.IntegrityError:
@@ -113,17 +96,14 @@ class ProductLogic:
     def delete_product(self, name):
         try:
 
-            # Query
-            query = 'DELETE FROM products WHERE name = ?'
-
-            # Execute run_query
-            self.db.run_query(query,(name,))
+            # Execute delete_product_db function from the database manager script
+            self.db.delete_product_db(name)
 
             return True, '{} had been deleted successfully.'.format(name)
         
-        except IndexError as ie:
+        except Exception as e:
 
-            print('Error: ', ie)
+            print('Error: ', e)
 
             # Adding that, we can make sure that you cant try to delete anything in the database if the selection failed.
             return False, '{} doesnt exists.'.format(name)
@@ -135,30 +115,56 @@ class ProductLogic:
             # New Name
             final_name = new_name.capitalize()
 
-            # Query
-            query = 'UPDATE products SET name = ?, price = ? WHERE name = ?'
-
-            parameters = (final_name, new_price, old_name) 
-
-            self.db.run_query(query, parameters)
+            # Execute update_product_db function
+            self.db.update_product_db(final_name, new_price, old_name)
 
             return True, '{} has been updated successfully.'.format(final_name)
         
         except sqlite3.IntegrityError:
             return False, 'Error: Name {} already exists.'.format(final_name)
         
-
-    # Clean table function. This function clean the GUI interface to keep updated the table when we see it. Important: It doesnt clean the table in the database, just clean in the GUI interface.
-    # def clean_table(self):
-    #     records = self.tree.get_children()
-        
-    #     for element in records:
-    #         self.tree.delete(element)
-
-    # Item selected function
-    # def item_selected(self, event):
-    #     print(self.tree.item(self.tree.selection())['text'],self.tree.item(self.tree.selection())['values'])
-    #     self.message['text'] = 'Selected {}'.format(self.tree.item(self.tree.selection()))
-
-        
     
+    # -- CATEGORIES -- 
+    # Get all categories function
+    def get_all_categories(self):
+        return self.db.get_categories_db()
+    
+
+    # Add category function
+    def add_category(self, name):
+        
+        # Add a new category with some validation
+        if not name or name.strip() == '':
+            return False, 'The category name cant be empty.'
+        
+        normalized_name = name.strip().capitalize()
+
+        try:
+            self.db.insert_category_db(normalized_name)
+            return True, 'Category {} added successfully.'.format(normalized_name)     
+
+        except sqlite3.IntegrityError:
+            return False, "Category {} already exists.".format(normalized_name)
+
+        except Exception as e:
+            return False, f"Unexpected error occurred: {e}"
+        
+    # Delete category function
+    def delete_category(self, name):
+        
+        # Delete a category by name using some validation
+        if name == 'General':
+            return False, "You cant delete the default category 'General'."
+        
+        try:
+
+            # Calling the delete_category_db function from database manager script. It gives the cursor
+            cursor = self.db.delete_category_db(name)
+
+            if cursor.rowcount == 0:
+                return False, 'Category {} not found.'.format(name)
+        
+            else:
+                return True, 'Category {} deleted correctly.'.format(name)
+        except Exception as e:
+            return False, 'Error trying to delete the category: {}'.format(e)
