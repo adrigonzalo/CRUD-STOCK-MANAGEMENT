@@ -175,7 +175,7 @@ class CategoryManagerWindow(Toplevel):
         self.cat_message.grid(row=1, column=0, columnspan=2, sticky='ew')
 
         # Add Button, calling the Handler using the Entry
-        self.btn_add = ttk.Button(add_frame, text='Add', command='')
+        self.btn_add = ttk.Button(add_frame, text='Add')
         self.btn_add.grid(row=0, column=2, padx=5, pady=5) 
 
 
@@ -191,7 +191,7 @@ class CategoryManagerWindow(Toplevel):
         self.cat_tree.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky='ew')
 
         # Delete Category Button
-        self.btn_delete = ttk.Button(self, text='Delete selected category', command='')
+        self.btn_delete = ttk.Button(self, text='Delete selected category')
         self.btn_delete.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky='ew')
 
     def get_name_input(self):
@@ -216,6 +216,90 @@ class CategoryManagerWindow(Toplevel):
 
 
     def get_selected_category_name(self):
+
+        try:
+            
+            item_id = self.tree.selection()[0]
+            return self.tree.item(item_id)['values'][0]
+        
+        except IndexError:
+            return None
+        
+
+# SUPPLIER MANAGER WINDOW
+class SupplierManagerWindow(Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title('Supplier Management')
+        self.resizable(False, False)
+        self.init_widgets()
+
+    def init_widgets(self):
+        
+        # Add Frame
+        add_frame = LabelFrame(self, text='Add Supplier')
+        add_frame.grid(row=0, column=0, padx=10, pady=10, sticky='ew')
+
+        # Name
+        Label(add_frame, text='Name:').grid(row=0, column=0, padx=5, pady=5)
+        self.supplier_name_entry = Entry(add_frame)
+        self.supplier_name_entry.grid(row=0, column=1, padx=5, pady=5)
+
+        # Phone
+        Label(add_frame, text='Phone:').grid(row=0, column=2, padx=5, pady=5)
+        self.supplier_phone_entry = Entry(add_frame)
+        self.supplier_phone_entry.grid(row=0, column=3, padx=5, pady=5)
+
+        # Output message for the supplier window
+        self.sup_message = Label(self, text='', fg='red')
+        self.sup_message.grid(row=1, column=0, columnspan=2, sticky='ew')
+
+        # Add Button, calling the Handler using the Entry
+        self.btn_add = ttk.Button(add_frame, text='Add')
+        self.btn_add.grid(row=0, column=2, padx=5, pady=5) 
+
+
+        # TreeView for showing all suppliers 
+        self.sup_tree = ttk.Treeview(self, columns=('#1', '#2'), height=8, selectmode='browse')
+        
+        self.sup_tree.heading('#0', text='ID', anchor=CENTER)
+        self.sup_tree.heading('#1', text='Name', anchor=CENTER)
+        self.sup_tree.heading('#2', text='Phone', anchor=CENTER)
+
+
+        self.sup_tree.column('#0', width=50, anchor=CENTER)
+        self.sup_tree.column('#1', width=150, anchor=W)
+        self.sup_tree.column('#2', width=100, anchor=CENTER)
+
+        self.sup_tree.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky='ew')
+
+        # Delete Category Button
+        self.btn_delete = ttk.Button(self, text='Delete selected supplier')
+        self.btn_delete.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky='ew')
+
+    def get_inputs(self):
+        return self.supplier_name_entry.get(), self.supplier_phone_entry.get()
+    
+    def clear_inputs(self):
+         
+        self.supplier_name_entry.delete(0, END)
+        self.supplier_phone_entry.delete(0, END)
+
+    def set_message(self, text, color='red'):
+         
+        self.message_label['text'] = text
+        self.message_label['fg'] = color
+
+    def load_tree_data(self, data_rows):
+
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        for row in data_rows:
+            self.tree.insert('', 'end', text=row[0], values=(row[1], row[2]))
+
+
+    def get_selected_supplier_name(self):
 
         try:
             

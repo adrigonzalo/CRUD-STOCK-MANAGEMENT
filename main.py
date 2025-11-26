@@ -10,7 +10,7 @@ import sqlite3
 # MODULE IMPORTS
 from modules.database_manager import DatabaseManager
 from modules.product_logic import ProductLogic
-from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow
+from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow, SupplierManagerWindow
 
 # PRODUCTS CLASS
 class Products:
@@ -72,12 +72,12 @@ class Products:
 
         # Delete and Edit Buttons
         ttk.Button(text='DELETE', command=self.delete_product).grid(row=5, column=0, sticky=W)
-        ttk.Button(text='EDIT', command=self.edit_product).grid(row=5, column=1, columnspan=2, sticky=W+E)        
+        ttk.Button(text='EDIT', command=self.edit_product).grid(row=5, column=1, columnspan=2, sticky=W)        
     
         # 3. SEARCH BAR
 
         self.search_panel = SearchForm(self.wind)
-        self.search_panel.grid(row=4, column=0, columnspan=3, pady=10, padx=5, sticky=W+E)
+        self.search_panel.grid(row=4, column=0, columnspan=3, pady=10, padx=5, sticky=W)
 
         # Search Button
         self.search_panel.btn_search.config(command=self.search_product)
@@ -281,21 +281,21 @@ class Products:
 
         # Add options in the "Management" Menu
         management_menu.add_command(label= "Manage Categories", command=self.manage_categories)
-        management_menu.add_command(label= "Manage Proveedores", command=self.manage_suppliers)
+        management_menu.add_command(label= "Manage Suppliers", command=self.manage_suppliers)
 
         # Add a separator
         management_menu.add_separator()
         management_menu.add_command(label='Exit', command=self.wind.quit)
 
         # Add the drop-down menu to the main bar 
-        menubar.add_cascade(label='Gestion', menu=management_menu)
+        menubar.add_cascade(label='Management', menu=management_menu)
         menubar.add_command(label='Help', command=lambda: messagebox.showinfo("Help", "Inventory System"))
 
     # Manage categories
     def manage_categories(self):
-        """Category managemente menu Handler."""
+        """Category management menu Handler."""
 
-        # Avoid open multiple managemente windows
+        # Avoid open multiple management windows
         if hasattr(self, 'category_wind') and self.cat_window.winfo_exists():
             self.cat_window.focus()
             return
@@ -353,7 +353,7 @@ class Products:
     #  Function to manage the event of delete a category
     def delete_category_handler(self):
 
-        self.cat_window.set_message(message) = ''
+        self.cat_window.set_message('')
 
         name = self.cat_window.get_selected_category_name()
 
@@ -373,10 +373,78 @@ class Products:
             if success:
                 self.get_categories_in_window()
 
+    # Manage suppliers
     def manage_suppliers(self):
-        """Handler para el menú de gestión de proveedores."""
-        # Crearemos aquí la lógica para abrir la ventana Toplevel
-        messagebox.showinfo("Gestión de Proveedores", "Ventana de gestión de proveedores en desarrollo...")
+        """Suppliers management menu Handler."""
+
+        # Avoid open multiple management windows
+        if hasattr(self, 'supp_wind') and self.supp_window.winfo_exists():
+            self.supp_window.focus()
+            return
+        
+        # -- UI Components
+
+        # 1. Create the window using the UI component
+        self.supp_window = SupplierManagerWindow(self.wind)
+
+        # 2. Connect Buttons (Controller -> UI)
+        self.supp_window.btn_add.config(command=self.add_supplier_handler)
+        self.supp_window.btn_delete.config(command=self.delete_supplier_handler)
+
+        # 3. Loading initial data
+        self.get_suppliers_in_window()
+
+    
+    # Function to load the supppliers in the Treeview of the managemente window.
+    def get_suppliers_in_window(self):
+
+        # Get the data from the product logic
+        db_rows = self.logic.get_all_suppliers()
+
+        # Filling Treeview with data
+        self.supp_window.load_tree_data(db_rows)
+
+    
+    # Function to manage the event of add a new category
+    def add_supplier_handler(self):
+
+        name, phone = self.supp_window.get_inputs()
+
+        # Call the logic from procut_logic.py
+        success, message = self.logic.add_supplier(name, phone)
+
+        # Update UI
+
+        # Message info
+        self.supp_window.set_message(message)
+
+        if success:
+            self.supp_window.clear_inputs()
+            self.get_suppliers_in_window()
+
+    
+    #  Function to manage the event of delete a supplier
+    def delete_supplier_handler(self):
+
+        self.supp_window.set_message('')
+
+        name = self.supp_window.get_selected_supplier_name()
+
+        if not name:
+            self.supp_window.set_message('Please select a supplier', 'red')
+            return
+        
+        # Delete Confirmation
+        if messagebox.askyesno('Delete Confirmation', 'Are you sure do you want to delete the supplier {}?'.format(name)):
+
+            # Call the logic from procut_logic.py
+            success, message = self.logic.delete_supplier(name)
+
+            # Update UI
+            self.supp_window.set_message(message)
+
+            if success:
+                self.get_suppliers_in_window()
 
 # Main Execution Block
 if __name__ == '__main__':

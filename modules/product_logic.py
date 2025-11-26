@@ -168,3 +168,53 @@ class ProductLogic:
                 return True, 'Category {} deleted correctly.'.format(name)
         except Exception as e:
             return False, 'Error trying to delete the category: {}'.format(e)
+        
+# -- SUPPLIERS -- 
+    # Get all suppliers function
+    def get_all_suppliers(self):
+        return self.db.get_suppliers_db()
+    
+
+    # Add supplier function
+    def add_supplier(self, name, phone):
+        
+        # Add a new supplier with some validation
+        if not name or name.strip() == '':
+
+            return False, 'The supplier name cant be empty.'
+        
+        elif not phone or phone.strip() == '':
+        
+            return False, 'The supplier phone cant be empty.'
+        
+        normalized_name = name.strip().capitalize()
+
+        try:
+            self.db.insert_supplier_db(normalized_name, phone)
+            return True, 'Supplier {} added successfully.'.format(normalized_name)     
+
+        except sqlite3.IntegrityError:
+            return False, "Supplier {} already exists.".format(normalized_name)
+
+        except Exception as e:
+            return False, f"Unexpected error occurred: {e}"
+        
+    # Delete supplier function
+    def delete_supplier(self, name):
+        
+        # Delete a supplier by name using some validation
+        if name == 'Proveedor Local':
+            return False, "You cant delete the default supplier 'Proveedor Local'."
+        
+        try:
+
+            # Calling the delete_supplier_db function from database manager script. It gives the cursor
+            cursor = self.db.delete_supplier_db(name)
+
+            if cursor.rowcount == 0:
+                return False, 'Supplier {} not found.'.format(name)
+        
+            else:
+                return True, 'Supplier {} deleted correctly.'.format(name)
+        except Exception as e:
+            return False, 'Error trying to delete the supplier: {}'.format(e)

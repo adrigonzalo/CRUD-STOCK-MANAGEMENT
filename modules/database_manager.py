@@ -106,6 +106,8 @@ class DatabaseManager:
         query = 'UPDATE products SET name = ?, price = ? WHERE name = ?'
         parameters = (new_name, new_price, old_name) 
         self.run_query(query, parameters)
+
+# -- CATEGORIES -- 
         
     # Get category function. Get the category id by name.
     def get_category_id_by_name_db(self, category_name):
@@ -126,4 +128,21 @@ class DatabaseManager:
     # Delete category function. Delete an existing category by name. Return the cursor if anything was deleted.
     def delete_category_db(self, name):
         query = 'DELETE FROM categories WHERE name = ?'
+        return self.run_query(query, (name,))
+    
+
+# -- SUPPLIERS --
+    # Get suppliers function. Return all the suppliers
+    def get_suppliers_db(self):
+        query = 'SELECT * FROM suppliers ORDER BY name ASC'
+        return self.run_query(query)
+    
+    # Insert new supplier function
+    def insert_suppliers_db(self, name, phone):
+        query = 'INSERT INTO suppliers (name, phone) VALUES (?, ?)'
+        self.run_query(query, (name, phone))
+
+    # Delete suppliers function. Delete an existing supplier by name. Return the cursor if anything was deleted.
+    def delete_category_db(self, name):
+        query = 'DELETE FROM suppliers WHERE name = ?'
         return self.run_query(query, (name,))
