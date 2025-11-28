@@ -43,14 +43,19 @@ class ProductForm(LabelFrame):
             self.spinbox = Spinbox(self, from_=0, to=1000)
             self.spinbox.grid(row=4, column=1, pady=2, padx=5)
 
+            # Description Label and Text Area
+            Label(self, text='Description:').grid(row=5, column=0, pady=2, padx=5, sticky=W)
+            self.description = Text(self, height=3, width=25)
+            self.description.grid(row=5, column=1, columnspan=2, pady=2, padx=5, sticky=W+E) 
+            
             # Save Button. 
             # We dont add the command arguments yet, because will main.py do
             self.save_button = ttk.Button(self,text='Save Product')
-            self.save_button.grid(row=5,columnspan=3, sticky=W+E, pady=2,padx=5)    
+            self.save_button.grid(row=6, columnspan=3, sticky=W+E, pady=2,padx=5)    
 
             # Output message
-            self.message = Label(text='', fg='red')
-            self.message.grid(row=6, column=0, columnspan=3, sticky=W + E)
+            self.message = Label(self, text='', fg='red')
+            self.message.grid(row=7, column=0, columnspan=3, sticky=W + E)
 
         # Load categories
         def load_categories(self):
@@ -203,24 +208,24 @@ class CategoryManagerWindow(Toplevel):
 
     def set_message(self, text, color='red'):
          
-        self.message_label['text'] = text
-        self.message_label['fg'] = color
+        self.cat_message['text'] = text
+        self.cat_message['fg'] = color
 
     def load_tree_data(self, data_rows):
 
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        for item in self.cat_tree.get_children():
+            self.cat_tree.delete(item)
 
         for row in data_rows:
-            self.tree.insert('', 'end', text=row[0], values=(row[1],))
+            self.cat_tree.insert('', 'end', text=row[0], values=(row[1],))
 
 
     def get_selected_category_name(self):
 
         try:
             
-            item_id = self.tree.selection()[0]
-            return self.tree.item(item_id)['values'][0]
+            item_id = self.cat_tree.selection()[0]
+            return self.cat_tree.item(item_id)['values'][0]
         
         except IndexError:
             return None
@@ -256,7 +261,7 @@ class SupplierManagerWindow(Toplevel):
 
         # Add Button, calling the Handler using the Entry
         self.btn_add = ttk.Button(add_frame, text='Add')
-        self.btn_add.grid(row=0, column=2, padx=5, pady=5) 
+        self.btn_add.grid(row=0, column=4, padx=5, pady=5) 
 
 
         # TreeView for showing all suppliers 
@@ -287,25 +292,101 @@ class SupplierManagerWindow(Toplevel):
 
     def set_message(self, text, color='red'):
          
-        self.message_label['text'] = text
-        self.message_label['fg'] = color
+        self.sup_message['text'] = text
+        self.sup_message['fg'] = color
 
     def load_tree_data(self, data_rows):
 
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        for item in self.sup_tree.get_children():
+            self.sup_tree.delete(item)
 
         for row in data_rows:
-            self.tree.insert('', 'end', text=row[0], values=(row[1], row[2]))
+            self.sup_tree.insert('', 'end', text=row[0], values=(row[1], row[2]))
 
 
     def get_selected_supplier_name(self):
 
         try:
             
-            item_id = self.tree.selection()[0]
-            return self.tree.item(item_id)['values'][0]
+            item_id = self.sup_tree.selection()[0]
+            return self.sup_tree.item(item_id)['values'][0]
         
         except IndexError:
             return None
                       
+
+# SALES PANEL USING SCALE, RADIOBUTTON AND OPTIONMENU
+class SalesPanel(LabelFrame):
+
+    def __init__(self, parent, logic_instance):
+        super().__init__(parent, text = 'Point of Sale')
+        self.logic = logic_instance
+        self.init_widgets()
+
+
+    def init_widgets(self):
+
+        # Product
+        Label(self, text='Product:').grid(row=0, column=0)
+        self.product_var = StringVar(self)
+        self.product_opt = OptionMenu(self, self.product_var, "Select product...")
+        self.product_opt.grid(row=0, column=1)
+
+        # Quantity
+        Label(self, text='Quantity:').grid(row=1, column=0)
+        self.qty_spin = Spinbox(self, from_=1, to=100)
+        self.qty_spin.grid(row=1, column=1)
+
+        # Discount
+        Label(self, text='Discount %:').grid(row=2, column=0)
+        self.discount_scale = Scale(self, from_=0, to=50, orient=HORIZONTAL)
+        self.discount_scale.grid(row=2, column=1)
+
+        # Payment Method
+        Label(self, text='Payment:').grid(row=3, column=0)
+        self.pay_bar = StringVar(value='Cash')
+        Radiobutton(self, text='Cash', variable=self.pay_bar, value='Cash').grid(row=3, column=1, sticky=W)
+        Radiobutton(self, text='Card', variable=self.pay_bar, value='Card').grid(row=4, column=1, sticky=W)        
+
+        # Sell Button
+        self.btn_sell = Button(self, text='Confirm Sale')
+        self.btn_sell.grid(row=5, columnspan=2, pady=10)
+
+
+# VISUAL DASHBOARD. Create a visual dashboard with a Canvas and a Listbox
+class DashboardPanel(Frame):
+    
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        # Canvas Widget
+        Label(self, text='Sales Trends (Canvas)').pack(pady=5)
+        self.canvas = Canvas(self, width=200, height=100, bg='white')
+        self.canvas.pack(pady=5)
+
+        # Draw single bars
+        self.canvas.create_rectangle(10, 80, 30, 20, fill='blue')
+        self.canvas.create_rectangle(40, 80, 60, 50, fill='green')
+        self.canvas.create_rectangle(70, 80, 90, 10, fill='red')
+
+        # Listbox and Scrollbar widget (Logs History)
+        Label(self, text='System Logs').pack()
+
+        log_frame = Frame(self)
+        log_frame.pack(fill=X, padx=10)
+
+        self.scrollbar = Scrollbar(log_frame)
+        self.scrollbar.pack(side=RIGHT, fill=Y)
+
+        self.log_list = Listbox(log_frame, yscrollcommand=self.scrollbar.set, height=5)
+        self.log_list.pack(side=LEFT)
+
+        self.scrollbar.config(command=self.log_list.yview)
+
+        # Message widget (Help)
+        self.msg = Message(self, text='Welcome to the ERP System.', width=150)
+        self.msg.pack(pady=10)
+
+    def add_log(self, text):
+        self.log_list.insert(END, text)
+        self.log_list.see(END)

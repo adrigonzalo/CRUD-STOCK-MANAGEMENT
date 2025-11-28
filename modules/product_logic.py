@@ -118,7 +118,7 @@ class ProductLogic:
             # Execute update_product_db function
             self.db.update_product_db(final_name, new_price, old_name)
 
-            return True, '{} has been updated successfully.'.format(final_name)
+            return True, f'{final_name} has been updated successfully.'
         
         except sqlite3.IntegrityError:
             return False, 'Error: Name {} already exists.'.format(final_name)
@@ -218,3 +218,57 @@ class ProductLogic:
                 return True, 'Supplier {} deleted correctly.'.format(name)
         except Exception as e:
             return False, 'Error trying to delete the supplier: {}'.format(e)
+        
+
+    # -- SALES --
+
+    # Process a sales function. 
+    """
+    Process a complete sale:
+    1- Look for the product and clients IDs.
+    2- Check stock
+    3- Calculate the discounted price.
+    4- Save a sale and subtract stock
+
+    """
+
+    def process_sale(self, product_name, client_name, quantity, discount_percent, payment_method):
+        try:
+
+            # 1. Get the data of the product
+            res = self.db.search_product_db(product_name)
+            product = res.fetchone()
+
+            if not product:
+                return False, "Product not found."
+            
+
+            prod_id, prod_price, current_stock = product[0], product[2], product[3]
+
+            # 2. Check Stock
+            qty = int(quantity)
+
+            if qty <= 0:
+                return False, 'Quantity must be positive.'
+            
+            if current_stock < qty:
+                return False, "Insuficient stock. Only {} available.".format(current_stock)
+            
+
+            # 3. Get Client ID. 
+            client_id = 1
+
+            # 4. Calculate the total.
+            total = prod_price * qty
+            final_total = total * (1 - (discount_percent / 100))
+
+            # 5. Transaction (Insert a sale + Update stock)
+            self.db.insert_sales_db(prod_id, client_id, qty, final_total, payment_method)
+
+            new_stock = current_stock - qty
+            self.db.update_product_stock_db(prod_id, new_stock)
+
+            return True, f"Sale successful! Total: ${final_total:.2f}"
+        
+        except Exception as e:
+            return False, f"Error processing sale: {e}"

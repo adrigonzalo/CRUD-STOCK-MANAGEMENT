@@ -62,15 +62,41 @@ class DatabaseManager:
                 )
             '''
         
+        sql_clients = """
+            CREATE TABLE IF NOT EXISTS clients (
+                "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+                "name" TEXT NOT NULL,
+                "email" TEXT,
+                "notes" TEXT
+                )
+        """
+
+        sql_sales = """
+            CREATE TABLE IF NOT EXISTS sales (
+                "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+                "product_id" INTEGER,
+                "client_id" INTEGER,
+                "quantity" INTEGER NOT NULL,
+                "total_price" REAL NOT NULL,
+                "payment_method" TEXT,
+                "date" TIMESTMAP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(product_id) REFERENCES products(id),
+                FOREIGN KEY(client_id) REFERENCES clients(id)                
+                )
+        """
+        
         self.run_query(sql_categories)
         self.run_query(sql_products)
         self.run_query(sql_suppliers)
+        self.run_query(sql_clients)
+        self.run_query(sql_sales)
 
         # DEFAULT DATA.
         # Insert a 'General' categorie and supplier to prevent errors when creating products without specifying this data yet.
         try:
             self.run_query('INSERT INTO categories (id, name) VALUES (1, "General")')
             self.run_query('INSERT INTO suppliers (id, name) VALUES (1, "Proveedor Local")')
+            self.run_query('INSERT INTO clients (id, name, email) VALUES (1, "Cliente Modelo", "cliente@correo.com")')
         except sqlite3.IntegrityError:
             pass
 
@@ -138,11 +164,52 @@ class DatabaseManager:
         return self.run_query(query)
     
     # Insert new supplier function
-    def insert_suppliers_db(self, name, phone):
+    def insert_supplier_db(self, name, phone):
         query = 'INSERT INTO suppliers (name, phone) VALUES (?, ?)'
         self.run_query(query, (name, phone))
 
     # Delete suppliers function. Delete an existing supplier by name. Return the cursor if anything was deleted.
-    def delete_category_db(self, name):
+    def delete_supplier_db(self, name):
         query = 'DELETE FROM suppliers WHERE name = ?'
         return self.run_query(query, (name,))
+    
+
+# -- CLIENTS --
+    # Get clients function. Return all the clients
+    def get_clients_db(self):
+        query = 'SELECT * FROM clients ORDER BY name ASC'
+        return self.run_query(query)
+    
+    # Insert new client function
+    def insert_client_db(self, name, email, notes):
+        query = 'INSERT INTO clients (name, email, notes) VALUES (?, ?, ?)'
+        self.run_query(query, (name, email, notes))
+
+    # Delete client function. Delete an existing client by name. Return the cursor if anything was deleted.
+    def delete_client_db(self, name):
+        query = 'DELETE FROM clients WHERE name = ?'
+        return self.run_query(query, (name,))
+    
+
+# -- SALES --
+    # Get sales function. Return all the sales
+    def get_sales_report_db(self):
+        query = '''
+            SELECT s.id, p.name, c.name, s.quantity, s.total_price, s.date
+            FROM sales s
+            JOIN products p ON s.product_id = p.id
+            JOIN clients c ON s.client_id = c.id
+            ORDER BY s.date DESC
+            '''
+        return self.run_query(query)
+    
+    # Insert new sales function
+    def insert_sales_db(self, product_id, client_id, quantity, total, method):
+        query = 'INSERT INTO sales (product_id, client_id, quantity, total_price, payment_method) VALUES (?, ?, ?, ?, ?)'
+        self.run_query(query, (product_id, client_id, quantity, total, method))
+
+
+    # Update product stock function
+    def update_product_stock_db(self, id, stock):
+        query = 'UPDATE products SET stock = ? WHERE id = ?'
+        return self.run_query(query,(id, stock,))

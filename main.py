@@ -10,7 +10,7 @@ import sqlite3
 # MODULE IMPORTS
 from modules.database_manager import DatabaseManager
 from modules.product_logic import ProductLogic
-from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow, SupplierManagerWindow
+from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow, SupplierManagerWindow, SalesPanel, DashboardPanel
 
 # PRODUCTS CLASS
 class Products:
@@ -39,45 +39,60 @@ class Products:
         style = ttk.Style()
         style.theme_use('alt')
 
+
+        # -- PANEDWINDOW WIDGET --
+        self.paned_window = PanedWindow(self.wind, orient=HORIZONTAL)
+        self.paned_window.pack(fill=BOTH, expand=True)
+
+
+        # Left Panel (Management)
+        left_frame = Frame(self.paned_window)
+        self.paned_window.add(left_frame)
+
+        # Right Panel (Sales and Dashboard)
+        right_frame = Frame(self.paned_window)
+        self.paned_window.add(right_frame)
+
+
         # -- MAIN INTERFACE GUI --
-        
-        # 1. Main Container.
+        # -- LEFT PANEL CONTENT
+
+        # 1. REGISTER FORM
         
         # It is neccesary to use self.logic because the ComboBox need the logic
-        self.form = ProductForm(self.wind, self.logic) 
-        self.form.grid(
-            row = 0,
-            column = 0,
-            columnspan=3,
-            pady= 5,
-            padx=5
-        )
-
-        # WE DONT NEED TO ADD ALL THE WIDGETS BECAUSE WE HAVE IT IN THE ui_components.py
+        self.form = ProductForm(left_frame, self.logic)
+        self.form.pack(fill=X, padx=5, pady=5) 
 
         # Save Button. The style and the positioning are defined in the ui_components.py
         self.form.save_button.config(command=self.add_product)
 
-        # Output message
-        self.message = Label(text='', fg='red')
-        self.message.grid(row=1, column=0, columnspan=3, sticky=W + E)
+        # 2. Output message
+        self.message = Label(left_frame, text='', fg='red')
+        self.message.pack(pady=5)
 
-        # 2. Treeview / Table
+        # 3. Checkbutton Widget (Filter)
+        self.show_active_var = IntVar(value = 1)
+        self.check_active = Checkbutton(left_frame, text='Show only active products', variable=self.show_active_var, command=self.get_products)
+        self.check_active.pack(pady=5)
 
-        self.tree = ProductTree(self.wind)
+        # 4. Treeview / Table
+        self.tree = ProductTree(left_frame)
+        self.tree.pack(fill=BOTH, expand=True, padx=5, pady=5)
 
         # Make interactive table
         self.tree.bind('<<TreeviewSelect>>', self.item_selected)
-        self.tree.grid(row=2, column=0, columnspan=3, pady=2, padx=5)
 
-        # Delete and Edit Buttons
-        ttk.Button(text='DELETE', command=self.delete_product).grid(row=5, column=0, sticky=W)
-        ttk.Button(text='EDIT', command=self.edit_product).grid(row=5, column=1, columnspan=2, sticky=W)        
+        # 5. Delete and Edit Buttons
+        btns_frame = Frame(left_frame)
+        btns_frame.pack(fill=X, padx=5, pady=5)
+
+        ttk.Button(btns_frame, text='DELETE', command=self.delete_product).pack(side=LEFT, fill=X, expand=True, padx=2)
+        ttk.Button(btns_frame, text='EDIT', command=self.edit_product).pack(side=LEFT, fill=X, expand=True, padx=2)        
     
-        # 3. SEARCH BAR
+        # 6. SEARCH BAR
 
-        self.search_panel = SearchForm(self.wind)
-        self.search_panel.grid(row=4, column=0, columnspan=3, pady=10, padx=5, sticky=W)
+        self.search_panel = SearchForm(left_frame)
+        self.search_panel.pack(fill=X, padx=5, pady=10)
 
         # Search Button
         self.search_panel.btn_search.config(command=self.search_product)
@@ -85,6 +100,18 @@ class Products:
         # Reset Button to see all again
         self.search_panel.btn_reset.config(command=self.get_products)
 
+        
+        # -- RIGHT PANEL CONTENT --
+
+        # 1. Sales Panel
+        self.sales_panel = SalesPanel(right_frame, self.logic)
+        self.sales_panel.pack(fill=X, padx=5, pady=5)
+
+        # 2. Dashboard
+        self.dashboard = DashboardPanel(right_frame)
+        self.dashboard.pack(fill=BOTH, expand=True, padx=5, pady=5)
+
+        
         # Load data
         self.get_products()
 
@@ -123,7 +150,9 @@ class Products:
 
         # Fill the table with data using their own method add_rows()
         for row in db_rows:
-            self.tree.add_row(name=row[1], price=row[2], stock=row[3], category_id=row[5])
+
+            category_id = row[5] if len(row) > 5 else 1
+            self.tree.add_row(name=row[1], price=row[2], stock=row[3], category_id=category_id)
     
     # Add product function
     def add_product(self):
@@ -196,7 +225,8 @@ class Products:
             return
             
         # Get name item selected
-        old_name, old_price = selected_item # (name, price)
+        old_name = selected_item[0] # name
+        old_price = selected_item[1] # price
 
         # Print old variables.
         print("Old name: ", old_name, "Old_price: ", old_price)
@@ -249,7 +279,9 @@ class Products:
             self.get_products()
 
             # Verification message
-            self.message['text'] = '{} has been updated successfully.'.format(new_name)
+            self.message['text'] = '{} has been updated successfully.'.format(final_name)
+        else:
+            self.message['text'] = message
 
     # Clean table function. This function clean the GUI interface to keep updated the table when we see it. Important: It doesnt clean the table in the database, just clean in the GUI interface.
     def clean_table(self):
