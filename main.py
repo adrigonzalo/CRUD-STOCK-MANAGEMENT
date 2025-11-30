@@ -107,6 +107,12 @@ class Products:
         self.sales_panel = SalesPanel(right_frame, self.logic)
         self.sales_panel.pack(fill=X, padx=5, pady=5)
 
+        # Connect the 'Confirm Sale' Button to procces the sale
+        self.sales_panel.btn_sell.config(command=self.process_sale)
+
+        # Load products at the beginning.
+        self.refresh_sales_products()
+
         # 2. Dashboard
         self.dashboard = DashboardPanel(right_frame)
         self.dashboard.pack(fill=BOTH, expand=True, padx=5, pady=5)
@@ -171,6 +177,9 @@ class Products:
             # If it saves well, clean and reload it
             self.form.clear()
             self.get_products()
+
+            # Reload the sales dropdown to add a product
+            self.refresh_sales_products()
                 
     # Delete product function
     def delete_product(self):
@@ -282,6 +291,60 @@ class Products:
             self.message['text'] = '{} has been updated successfully.'.format(final_name)
         else:
             self.message['text'] = message
+
+    # Procces a product sales function. It is not the same as the procces_sale function in product_logic.py
+    def process_sale(self):
+
+        # 1. Get the data from the sales panel
+        sale_data = self.sales_panel.get_sale_data()
+
+        product_name = sale_data['product_name']
+        quantity = sale_data['quantity']
+        discount = sale_data['discount']
+        payment_method = sale_data['payment_method']
+
+        # 2. Validation to make sure that we dont confirm a default sale
+        if product_name == 'Select product...' or product_name == 'No products available.':
+            self.sales_panel.set_message('Please select a valid product','red')
+            return
+
+
+        # 3. Process sale through logic
+        success, message = self.logic.process_sale(
+            product_name=product_name,
+            client_name='Model Client', # In the future versions will be changed
+            quantity=quantity,
+            discount_percent=discount,
+            payment_method=payment_method
+        )
+
+        # 4. Update UI.
+        if success:
+            self.sales_panel.set_message(message, 'green')
+            
+            self.get_products()
+
+            self.sales_panel.reset_form()
+
+            self.dashboard.add_log(f'Sale: {product_name} x{quantity} - {message}')
+        
+        else:
+            self.sales_panel.set_message(message, 'red')
+
+    
+    # Function to refresh products in Sales Panel OptionMenu
+    def refresh_sales_products(self):
+
+        # 1. Get all the products from the logic layer
+        products_data = self.logic.get_products().fetchall()
+
+        # 2. Extract only the names
+        product_names = [row[1] for row in products_data]
+
+        # 3. Pass the lista of names to the SalesPanel component
+        self.sales_panel.load_products(product_names)
+
+
 
     # Clean table function. This function clean the GUI interface to keep updated the table when we see it. Important: It doesnt clean the table in the database, just clean in the GUI interface.
     def clean_table(self):

@@ -212,4 +212,4 @@ class DatabaseManager:
     # Update product stock function
     def update_product_stock_db(self, id, stock):
         query = 'UPDATE products SET stock = ? WHERE id = ?'
-        return self.run_query(query,(id, stock,))
+        return self.run_query(query,(stock, id))

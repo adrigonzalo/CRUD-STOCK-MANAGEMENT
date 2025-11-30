@@ -322,6 +322,7 @@ class SalesPanel(LabelFrame):
         super().__init__(parent, text = 'Point of Sale')
         self.logic = logic_instance
         self.init_widgets()
+        self.load_products([])
 
 
     def init_widgets(self):
@@ -344,14 +345,63 @@ class SalesPanel(LabelFrame):
 
         # Payment Method
         Label(self, text='Payment:').grid(row=3, column=0)
-        self.pay_bar = StringVar(value='Cash')
-        Radiobutton(self, text='Cash', variable=self.pay_bar, value='Cash').grid(row=3, column=1, sticky=W)
-        Radiobutton(self, text='Card', variable=self.pay_bar, value='Card').grid(row=4, column=1, sticky=W)        
+        self.pay_var = StringVar(value='Cash')
+        Radiobutton(self, text='Cash', variable=self.pay_var, value='Cash').grid(row=3, column=1, sticky=W)
+        Radiobutton(self, text='Card', variable=self.pay_var, value='Card').grid(row=4, column=1, sticky=W)        
 
         # Sell Button
         self.btn_sell = Button(self, text='Confirm Sale')
         self.btn_sell.grid(row=5, columnspan=2, pady=10)
 
+        # Message
+        self.sale_message = Label(self, text='', fg='red')
+        self.sale_message.grid(row=6, column=0, columnspan=2, pady=5)
+
+    # Load products function
+    def load_products(self, product_names):
+
+        # Clear the current options and variable        
+        menu = self.product_opt['menu']
+        menu.delete(0, 'end')
+
+        # Set the default variable text
+        if product_names:
+
+            self.product_var.set(product_names[0])
+
+        else:
+            self.product_var.set('No products available.')
+
+        # Add new products
+        for name in product_names:
+            menu.add_command(label=name, command=lambda value=name: self.product_var.set(value))
+    
+    # Get all the sales data function
+    def get_sale_data(self):
+
+        return {
+            'product_name': self.product_var.get(),
+            'quantity': self.qty_spin.get(),
+            'discount': self.discount_scale.get(),
+            'payment_method': self.pay_var.get()
+        }
+    
+
+    # Display the message in the sales panel function
+    def set_message(self, text, color='blue'):
+        
+        self.sale_message['text'] = text
+        self.sale_message['fg'] = color
+
+
+    # Reset form function
+    def reset_form(self):
+
+        self.qty_spin.delete(0, END)
+        self.qty_spin.insert(0, 1)
+        self.discount_scale.set(0)
+        self.pay_var.set('Cash')
+        
 
 # VISUAL DASHBOARD. Create a visual dashboard with a Canvas and a Listbox
 class DashboardPanel(Frame):
