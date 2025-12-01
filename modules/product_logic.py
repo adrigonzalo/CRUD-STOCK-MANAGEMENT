@@ -272,3 +272,7 @@ class ProductLogic:
         
         except Exception as e:
             return False, f"Error processing sale: {e}"
+        
+    # Function to get sales grouped by category
+    def get_sales_by_category(self):
+        return self.db.get_sales_by_category_db()

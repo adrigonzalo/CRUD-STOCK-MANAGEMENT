@@ -213,3 +213,19 @@ class DatabaseManager:
     def update_product_stock_db(self, id, stock):
         query = 'UPDATE products SET stock = ? WHERE id = ?'
         return self.run_query(query,(stock, id))
+    
+
+    def get_sales_by_category_db(self):
+        query = '''
+            SELECT c.name as category_name,
+            SUM(s.total_price) as total_sales
+            FROM sales s
+            JOIN products p 
+            ON s.product_id = p.id
+            JOIN categories c
+            ON p.category_id = c.id
+            GROUP BY category_name
+            ORDER BY total_sales DESC
+        '''
+
+        return self.run_query(query).fetchall()

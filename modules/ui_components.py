@@ -411,13 +411,11 @@ class DashboardPanel(Frame):
 
         # Canvas Widget
         Label(self, text='Sales Trends (Canvas)').pack(pady=5)
-        self.canvas = Canvas(self, width=200, height=100, bg='white')
+        self.canvas = Canvas(self, width=400, height=200, bg='white')
         self.canvas.pack(pady=5)
 
-        # Draw single bars
-        self.canvas.create_rectangle(10, 80, 30, 20, fill='blue')
-        self.canvas.create_rectangle(40, 80, 60, 50, fill='green')
-        self.canvas.create_rectangle(70, 80, 90, 10, fill='red')
+        # Draw bars
+        self.draw_sales_graph([])
 
         # Listbox and Scrollbar widget (Logs History)
         Label(self, text='System Logs').pack()
@@ -440,3 +438,51 @@ class DashboardPanel(Frame):
     def add_log(self, text):
         self.log_list.insert(END, text)
         self.log_list.see(END)
+
+    def draw_sales_graph(self, sales_data):
+
+        # Clear previous drawings
+        self.canvas.delete('all')
+
+        # Check if there is data
+        if not sales_data:
+            self.canvas.create_text(100, 50, text='No sales data available', fill='gray')
+            return
+        
+
+        # Constants for drawing
+        CANVAS_WIDTH = 400
+        CANVAS_HEIGHT = 200
+        BAR_WIDTH = 20
+        PADDING = 20
+        MAX_HEIGHT = CANVAS_HEIGHT - PADDING * 2
+
+        # Get the maximum total sales to scale the bars
+        max_total_sales = max(row[1] for row in sales_data)
+
+        x_start = PADDING
+
+        for name, total in sales_data:
+
+            # Calculate proportional height
+            bar_height = (total / max_total_sales) * MAX_HEIGHT
+
+            # Bar coordinates
+            x1 = x_start
+            y1 = CANVAS_HEIGHT - PADDING
+            x2 = x_start + BAR_WIDTH
+            y2 = CANVAS_HEIGHT - PADDING - bar_height
+
+            # Draw the bar (using different colors bases on position)
+            color = 'blue' if x_start % 3 == 0 else ('green' if x_start % 3 == 1 else 'red')
+            self.canvas.create_rectangle(x1, y1, x2, y2, fill=color)
+
+            # Draw the category name below the bar
+            self.canvas.create_text(x1 + BAR_WIDTH / 2, CANVAS_HEIGHT - 5, text=name, angle=0, anchor='c', font=('Arial', 7))
+
+            # Move x_start for the next bar
+            x_start += BAR_WIDTH + PADDING
+
+            # Stop if we run out of canvas space
+            if x_start > CANVAS_WIDTH - PADDING:
+                break

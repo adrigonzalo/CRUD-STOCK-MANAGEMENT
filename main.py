@@ -325,12 +325,16 @@ class Products:
             self.get_products()
 
             self.sales_panel.reset_form()
-
-            self.dashboard.add_log(f'Sale: {product_name} x{quantity} - {message}')
+            
+            # Update the Dashboard
+            self.update_dashboard()
         
         else:
             self.sales_panel.set_message(message, 'red')
 
+        # Add the log 
+        self.dashboard.add_log(f'Sale: {product_name} x{quantity} - {message}')
+    
     
     # Function to refresh products in Sales Panel OptionMenu
     def refresh_sales_products(self):
@@ -540,6 +544,16 @@ class Products:
 
             if success:
                 self.get_suppliers_in_window()
+    
+
+    # Function to fetch and update the Dashboard visuals
+    def update_dashboard(self):
+
+        # Get sales data from the logic layer
+        sales_data = self.logic.get_sales_by_category()
+
+        # Get data to the Dashboard component for drawing
+        self.dashboard.draw_sales_graph(sales_data)
 
 # Main Execution Block
 if __name__ == '__main__':
