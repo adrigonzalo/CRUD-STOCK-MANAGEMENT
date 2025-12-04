@@ -10,7 +10,7 @@ import sqlite3
 # MODULE IMPORTS
 from modules.database_manager import DatabaseManager
 from modules.product_logic import ProductLogic
-from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow, SupplierManagerWindow, SalesPanel, DashboardPanel, ClientManagerWindow
+from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow, SupplierManagerWindow, SalesPanel, DashboardPanel, ClientManagerWindow, SalesReportWindow
 
 # PRODUCTS CLASS
 class Products:
@@ -383,6 +383,7 @@ class Products:
 
         # Create the "Management" Menu (Dropdown)
         management_menu = Menu(menubar, tearoff=0)
+        reports_menu = Menu(menubar, tearoff=0)
 
         # Add options in the "Management" Menu
         management_menu.add_command(label= "Manage Categories", command=self.manage_categories)
@@ -395,6 +396,10 @@ class Products:
 
         # Add the drop-down menu to the main bar 
         menubar.add_cascade(label='Management', menu=management_menu)
+        
+        reports_menu.add_command(label='Sales History', command=self.open_sales_report)
+        menubar.add_cascade(label='Reports', menu=reports_menu)
+
         menubar.add_command(label='Help', command=lambda: messagebox.showinfo("Help", "Inventory System"))
 
     # Manage categories
@@ -638,6 +643,19 @@ class Products:
 
         # 3. Pass the list of names to the SalesPanel component
         self.sales_panel.load_clients(client_names)
+
+    
+    # Function to open Sales Report
+    def open_sales_report(self):
+
+        # Create Window
+        report_window = SalesReportWindow(self.wind)
+
+        # Get data from Logic
+        sales_data = self.logic.get_sales_report()
+
+        # Load data into UI
+        report_window.load_data(sales_data)
                                              
 # Main Execution Block
 if __name__ == '__main__':

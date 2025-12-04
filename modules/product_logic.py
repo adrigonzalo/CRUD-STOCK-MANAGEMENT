@@ -282,6 +282,11 @@ class ProductLogic:
     def get_sales_by_category(self):
         return self.db.get_sales_by_category_db()
     
+    # Function to get the sales report
+    def get_sales_report(self):
+
+        return self.db.get_sales_report_db().fetchall()
+    
 
     # -- CLIENTS LOGIC --
 

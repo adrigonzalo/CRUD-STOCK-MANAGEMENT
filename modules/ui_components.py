@@ -634,3 +634,75 @@ class ClientManagerWindow(Toplevel):
             return self.tree.item(selected_item)['values'][0]
         
         return None
+    
+
+# Sales Report Window
+class SalesReportWindow(Toplevel):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title('Sales Report History')
+        self.geometry('1200x600')
+        self.transient(parent) # It makes the window visualize above the main window
+        self.init_widgets()
+
+    
+    def init_widgets(self):
+
+        # Title
+        Label(self, text='Sales History', font=('Arial', 14, 'bold')).pack(pady=10)
+
+        # Treeview Frame
+        tree_frame = Frame(self)
+        tree_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
+
+        # Scrollbar
+        scrollbar = Scrollbar(tree_frame)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        # Treeview Configuration
+        columns = ('id','product','client','quantity','total','date')
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show='headings', yscrollcommand=scrollbar.set)
+
+        # Headers
+        self.tree.heading('id', text='ID')
+        self.tree.heading('product', text='Product')
+        self.tree.heading('client', text='Client')
+        self.tree.heading('quantity', text='Quantity')
+        self.tree.heading('total', text='Total ($)')
+        self.tree.heading('date', text='Date')
+
+        # Columns dimensions
+        self.tree.column('id', width=40, anchor=CENTER)
+        self.tree.column('product', width=150)
+        self.tree.column('client', width=150)
+        self.tree.column('quantity', width=50, anchor=CENTER)
+        self.tree.column('total', width=100, anchor=E)
+        self.tree.column('date', width=150, anchor=CENTER)
+
+        self.tree.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.config(command=self.tree.yview)
+
+        # Close Button
+        Button(self, text='Close', command=self.destroy, bg='gray', fg='white').pack(pady=10)
+
+
+    # Load data function
+    def load_data(self, data_rows):
+
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+
+        for row in data_rows:
+
+            id_sale, prod, cli, qty, total, date = row
+            total_formatted = f"{total:.2f}"
+
+            self.tree.insert('', END, values=(id_sale, prod, cli, qty, total_formatted, date))      
+
+
+
+
+
+
