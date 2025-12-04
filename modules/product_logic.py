@@ -256,7 +256,12 @@ class ProductLogic:
             
 
             # 3. Get Client ID. 
-            client_id = 1
+            res_client = self.db.get_client_id_by_name_db(client_name)
+            client_data = res_client.fetchone()
+
+            # If client doesnt found, take the 1 (Model Client).
+            client_id = client_data[0] if client_data else 1
+            
 
             # 4. Calculate the total.
             total = prod_price * qty

@@ -115,6 +115,9 @@ class Products:
         # Load products at the beginning.
         self.refresh_sales_products()
 
+        # Load clients at the beginning.
+        self.refresh_sales_clients()
+
         # 2. Dashboard
         self.dashboard = DashboardPanel(right_frame)
         self.dashboard.pack(fill=BOTH, expand=True, padx=5, pady=5)
@@ -304,6 +307,7 @@ class Products:
         quantity = sale_data['quantity']
         discount = sale_data['discount']
         payment_method = sale_data['payment_method']
+        client_name = sale_data['client_name']
 
         # 2. Validation to make sure that we dont confirm a default sale
         if product_name == 'Select product...' or product_name == 'No products available.':
@@ -314,7 +318,7 @@ class Products:
         # 3. Process sale through logic
         success, message = self.logic.process_sale(
             product_name=product_name,
-            client_name='Model Client', # In the future versions will be changed
+            client_name=client_name, 
             quantity=quantity,
             discount_percent=discount,
             payment_method=payment_method
@@ -598,6 +602,8 @@ class Products:
             self.client_window.clear_inputs()
             self.get_clients_in_window() # Reload data
 
+            self.refresh_sales_clients()
+
     # Function to manage the event of deleting a client
     def delete_client_handler(self):
 
@@ -620,6 +626,18 @@ class Products:
 
             if success:
                 self.get_clients_in_window() # Reload data
+    
+    # Function to refresh clients in Sales Panel OptionMenu
+    def refresh_sales_clients(self):
+
+        # 1. Get all the clients from the logic layer
+        clients_data = self.logic.get_all_clients()
+
+        # 2. Extract only the names
+        client_names = [row[1] for row in clients_data]
+
+        # 3. Pass the list of names to the SalesPanel component
+        self.sales_panel.load_clients(client_names)
                                              
 # Main Execution Block
 if __name__ == '__main__':

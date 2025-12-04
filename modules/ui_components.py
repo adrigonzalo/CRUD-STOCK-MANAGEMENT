@@ -323,6 +323,7 @@ class SalesPanel(LabelFrame):
         self.logic = logic_instance
         self.init_widgets()
         self.load_products([])
+        self.load_clients([])
 
 
     def init_widgets(self):
@@ -347,15 +348,21 @@ class SalesPanel(LabelFrame):
         Label(self, text='Payment:').grid(row=3, column=0)
         self.pay_var = StringVar(value='Cash')
         Radiobutton(self, text='Cash', variable=self.pay_var, value='Cash').grid(row=3, column=1, sticky=W)
-        Radiobutton(self, text='Card', variable=self.pay_var, value='Card').grid(row=4, column=1, sticky=W)        
+        Radiobutton(self, text='Card', variable=self.pay_var, value='Card').grid(row=4, column=1, sticky=W)
+
+        # Client OptionMenu
+        Label(self, text='Client Menu:').grid(row=5, column=0)        
+        self.client_var = StringVar(self)
+        self.client_opt = OptionMenu(self, self.client_var, "Select client...")
+        self.client_opt.grid(row=5, column=1)
 
         # Sell Button
         self.btn_sell = Button(self, text='Confirm Sale')
-        self.btn_sell.grid(row=5, columnspan=2, pady=10)
+        self.btn_sell.grid(row=7, columnspan=2, pady=10)
 
         # Message
         self.sale_message = Label(self, text='', fg='red')
-        self.sale_message.grid(row=6, column=0, columnspan=2, pady=5)
+        self.sale_message.grid(row=8, column=0, columnspan=2, pady=5)
 
     # Load products function
     def load_products(self, product_names):
@@ -376,6 +383,25 @@ class SalesPanel(LabelFrame):
         for name in product_names:
             menu.add_command(label=name, command=lambda value=name: self.product_var.set(value))
     
+    # Load clients function.
+    def load_clients(self, client_names):
+
+        # Clear the current options and variable        
+        menu = self.client_opt['menu']
+        menu.delete(0, 'end')
+
+        # Set the default variable text
+        if client_names:
+
+            self.client_var.set(client_names[0])
+
+        else:
+            self.client_var.set('No clients available.')
+
+        # Add new products
+        for name in client_names:
+            menu.add_command(label=name, command=lambda value=name: self.client_var.set(value))
+
     # Get all the sales data function
     def get_sale_data(self):
 
@@ -383,7 +409,8 @@ class SalesPanel(LabelFrame):
             'product_name': self.product_var.get(),
             'quantity': self.qty_spin.get(),
             'discount': self.discount_scale.get(),
-            'payment_method': self.pay_var.get()
+            'payment_method': self.pay_var.get(),
+            'client_name': self.client_var.get()
         }
     
 

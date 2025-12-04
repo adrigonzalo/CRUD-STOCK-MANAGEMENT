@@ -190,6 +190,12 @@ class DatabaseManager:
         query = 'DELETE FROM clients WHERE name = ?'
         return self.run_query(query, (name,))
     
+    # Function to select an ID client based on their name
+    def get_client_id_by_name_db(self, name):
+
+        query = 'SELECT id FROM clients WHERE name = ?'
+        return self.run_query(query, (name,))
+    
 
 # -- SALES --
     # Get sales function. Return all the sales
