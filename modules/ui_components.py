@@ -421,12 +421,12 @@ class DashboardPanel(Frame):
         Label(self, text='System Logs').pack()
 
         log_frame = Frame(self)
-        log_frame.pack(fill=X, padx=10)
+        log_frame.pack(padx=10)
 
         self.scrollbar = Scrollbar(log_frame)
         self.scrollbar.pack(side=RIGHT, fill=Y)
 
-        self.log_list = Listbox(log_frame, yscrollcommand=self.scrollbar.set, height=5)
+        self.log_list = Listbox(log_frame, yscrollcommand=self.scrollbar.set, width=64, height=10)
         self.log_list.pack(side=LEFT)
 
         self.scrollbar.config(command=self.log_list.yview)
@@ -486,3 +486,124 @@ class DashboardPanel(Frame):
             # Stop if we run out of canvas space
             if x_start > CANVAS_WIDTH - PADDING:
                 break
+
+
+# Client manager window class
+class ClientManagerWindow(Toplevel):
+
+    # Constructor
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title('Client Manager')
+        self.transient(parent) # Keep the window above the main window
+        self.grab_set()
+
+        self.init_widgets()
+
+
+    # Initialize widgets
+    def init_widgets(self):
+
+        # -- LEFT FRAME: Form to add/delete clients --
+
+        left_frame = Frame(self, padx=10, pady=10)
+        left_frame.grid(row=0, column=0, sticky='ns')
+
+        Label(left_frame, text='Cliente Registration', font=('Arial', 10, 'bold')).pack(pady=5)
+
+        # Name Input
+        Label(left_frame, text='Name:').pack(pady=2)
+        self.name_input = Entry(left_frame)
+        self.name_input.pack(fill=X, padx=5)
+
+        # Email Input
+        Label(left_frame, text='Email:').pack(pady=2)
+        self.email_imput = Entry(left_frame)
+        self.email_imput.pack(fill=X, padx=5)
+
+        # Notes Textbox
+        Label(left_frame, text='Notes:').pack(pady=2)
+        self.notes_text = Text(left_frame, height=5, width=30)
+        self.notes_text.pack(fill=X, padx=5)
+
+        # Message Label (for feedback)
+        self.message = Label(left_frame, text='', fg='red')
+        self.message.pack(pady=5)
+
+        # Button Frame
+        button_frame = Frame(left_frame)
+        button_frame.pack(pady=10)
+
+        # Add Button (command will be set in main.py)
+        self.add_button = Button(button_frame, text='Add Client', bg='green', fg='white')
+        self.add_button.pack(side=LEFT, padx=5)
+
+        # Delete Button (command will be set in main.py)
+        self.delete_button = Button(button_frame, text='Delete Selected', bg='red', fg='white')
+        self.delete_button.pack(side=LEFT, padx=5)
+
+        
+        # -- RIGHT FRAME: TreeView for displaying Clients -- 
+        right_frame = Frame(self, padx=10, pady=10)
+        right_frame.grid(row=0, column=1, sticky='nsew')
+        self.grid_columnconfigure(1, weight=1) # Make the TreeView Frame expandable
+
+        # TreeView setup
+        self.tree = ttk.Treeview(right_frame, columns=('Name','Email','Notes',), show='headings')
+        self.tree.heading('Name', text='Name')
+        self.tree.heading('Email', text='Email')
+        self.tree.heading('Notes', text='Notes')
+
+        # Set widths of the columns
+        self.tree.column('Name', width=150)
+        self.tree.column('Email', width=150)
+        self.tree.column('Notes', width=250)
+
+        self.tree.pack(side=LEFT, fill=BOTH, expand=True)
+
+        # Scrollbar
+        scrollbar = Scrollbar(right_frame, orient='vertical', command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+
+    # Method to retrieve form data
+    def get_inputs(self):
+        name = self.name_input.get()
+        email = self.email_imput.get()
+        notes = self.notes_text.get('1.0', END).strip()
+        
+        return name, email, notes
+    
+    # Method to clear form inputs
+    def clear_inputs(self):
+        self.name_input.delete(0, END)
+        self.email_imput.delete(0, END)
+        self.notes_text.delete('1.0', END)
+
+    # Method to set message feedback
+    def set_message(self, text, color='black'):
+        self.message.config(text=text, fg=color)
+
+    # Method to load data into the Treeview
+    def load_tree_data(self, data_rows):
+        
+        # Clear the inpus
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        # Insert new data
+        for row in data_rows:
+
+            self.tree.insert('', END, values=(row[1], row[2], row[3]))
+
+    # Method to get the selected cliente name for deletion
+    def get_selected_client_name(self):
+        selected_item = self.tree.focus()
+
+        if selected_item:
+
+            # Asume the name is the first values in the row
+            return self.tree.item(selected_item)['values'][0]
+        
+        return None

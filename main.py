@@ -10,7 +10,7 @@ import sqlite3
 # MODULE IMPORTS
 from modules.database_manager import DatabaseManager
 from modules.product_logic import ProductLogic
-from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow, SupplierManagerWindow, SalesPanel, DashboardPanel
+from modules.ui_components import ProductForm, ProductTree, SearchForm, CategoryManagerWindow, SupplierManagerWindow, SalesPanel, DashboardPanel, ClientManagerWindow
 
 # PRODUCTS CLASS
 class Products:
@@ -41,17 +41,17 @@ class Products:
 
 
         # -- PANEDWINDOW WIDGET --
-        self.paned_window = PanedWindow(self.wind, orient=HORIZONTAL)
+        self.paned_window = ttk.Panedwindow(self.wind, orient=HORIZONTAL)
         self.paned_window.pack(fill=BOTH, expand=True)
 
 
         # Left Panel (Management)
         left_frame = Frame(self.paned_window)
-        self.paned_window.add(left_frame)
+        self.paned_window.add(left_frame, weight=0)
 
         # Right Panel (Sales and Dashboard)
         right_frame = Frame(self.paned_window)
-        self.paned_window.add(right_frame)
+        self.paned_window.add(right_frame, weight=1)
 
 
         # -- MAIN INTERFACE GUI --
@@ -59,9 +59,10 @@ class Products:
 
         # 1. REGISTER FORM
         
-        # It is neccesary to use self.logic because the ComboBox need the logic
+        # It is neccesary to use self.logic because the ComboBox need the logic.
+        # anchor = 'nw': It makes the the width of the form fit to the content. We have removed the fill=X.
         self.form = ProductForm(left_frame, self.logic)
-        self.form.pack(fill=X, padx=5, pady=5) 
+        self.form.pack(anchor='nw', padx=5, pady=5) 
 
         # Save Button. The style and the positioning are defined in the ui_components.py
         self.form.save_button.config(command=self.add_product)
@@ -92,7 +93,7 @@ class Products:
         # 6. SEARCH BAR
 
         self.search_panel = SearchForm(left_frame)
-        self.search_panel.pack(fill=X, padx=5, pady=10)
+        self.search_panel.pack(anchor=W, padx=5, pady=10)
 
         # Search Button
         self.search_panel.btn_search.config(command=self.search_product)
@@ -103,9 +104,10 @@ class Products:
         
         # -- RIGHT PANEL CONTENT --
 
-        # 1. Sales Panel
+        # 1. Sales Panel.
+        # anchor = 'nw': It makes the the width of the form fit to the content. We have removed the fill=X.
         self.sales_panel = SalesPanel(right_frame, self.logic)
-        self.sales_panel.pack(fill=X, padx=5, pady=5)
+        self.sales_panel.pack(anchor='nw', padx=5, pady=5)
 
         # Connect the 'Confirm Sale' Button to procces the sale
         self.sales_panel.btn_sell.config(command=self.process_sale)
@@ -366,7 +368,7 @@ class Products:
 
             self.message['text'] = 'Selected {}'.format(selected[0])
 
-# -- CATEGORIES SECTION --
+    # -- CATEGORIES SECTION --
 
     # Create the menu bar function
     def create_menu_bar(self):
@@ -381,6 +383,7 @@ class Products:
         # Add options in the "Management" Menu
         management_menu.add_command(label= "Manage Categories", command=self.manage_categories)
         management_menu.add_command(label= "Manage Suppliers", command=self.manage_suppliers)
+        management_menu.add_command(label= "Manage Clients", command=self.manage_clients)
 
         # Add a separator
         management_menu.add_separator()
@@ -555,6 +558,69 @@ class Products:
         # Get data to the Dashboard component for drawing
         self.dashboard.draw_sales_graph(sales_data)
 
+    
+    # -- CLIENTS -- 
+    def manage_clients(self):
+
+        # Create the Cliente Manager Window
+        self.client_window = ClientManagerWindow(self.wind)
+
+        # Connect handlers
+        self.client_window.add_button.config(command=self.add_client_handler)
+        self.client_window.delete_button.config(command=self.delete_client_handler)
+
+        # Load initial data
+        self.get_clients_in_window()
+
+    # Function to fetch and load client data into the Treeview
+    def get_clients_in_window(self):
+
+        # Call the logic to get all clients
+        db_rows = self.logic.get_all_clients()
+
+        # Filling Treeview with data
+        self.client_window.load_tree_data(db_rows)
+
+    # Function to manage the event of adding a new client
+    def add_client_handler(self):
+
+        # Get the data from the input or texts
+        name, email, notes = self.client_window.get_inputs()
+
+        # Call the logic
+        success, message = self.logic.add_client(name=name, email=email, notes=notes)
+
+        # Update the UI
+        self.client_window.set_message(message, 'green' if success else 'red')
+
+        if success:
+
+            self.client_window.clear_inputs()
+            self.get_clients_in_window() # Reload data
+
+    # Function to manage the event of deleting a client
+    def delete_client_handler(self):
+
+        self.client_window.set_message('')
+
+        name = self.client_window.get_selected_client_name()
+
+        if not name:
+            self.client_window.set_message('Please select a client','red')
+            return
+        
+        # Deletion Confirmation
+        if messagebox.askyesno('Delete Confirmation', f'Are you sure you want to delete the client {name}?'):
+
+            # Call the logic
+            success, message = self.logic.delete_client(name)
+
+            # Update UI
+            self.client_window.set_message(message, 'green' if success else 'red')
+
+            if success:
+                self.get_clients_in_window() # Reload data
+                                             
 # Main Execution Block
 if __name__ == '__main__':
     window = Tk()

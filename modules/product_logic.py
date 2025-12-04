@@ -169,7 +169,7 @@ class ProductLogic:
         except Exception as e:
             return False, 'Error trying to delete the category: {}'.format(e)
         
-# -- SUPPLIERS -- 
+    # -- SUPPLIERS -- 
     # Get all suppliers function
     def get_all_suppliers(self):
         return self.db.get_suppliers_db()
@@ -276,3 +276,49 @@ class ProductLogic:
     # Function to get sales grouped by category
     def get_sales_by_category(self):
         return self.db.get_sales_by_category_db()
+    
+
+    # -- CLIENTS LOGIC --
+
+    # Get all clients
+    def get_all_clients(self):
+        return self.db.get_clients_db().fetchall()
+    
+    # Add client
+    def add_client(self, name, email, notes):
+        
+        if not name or not email:
+            return False, 'Name and Email are required fields.'
+        
+        # Email format check
+        if '@' not in email or '.' not in email:
+            return False, 'Invalid email format.'
+        
+
+        # Insert a new client
+        try:
+            self.db.insert_client_db(name, email, notes)
+            return True, f'Client "{name}" added successfully.'
+        
+        except Exception as e:
+
+            # Check for unique name constraint
+            if 'UNIQUE constraint failed' in str(e):
+                return False, f'Error: Cliente with name "{name}" already exists.'
+            
+            return False, f'An error ocurred: {e}'
+        
+    
+    # Delete client
+    def delete_client(self, name):
+
+        if not name:
+            return False, 'Client name is required for deletion.'
+        
+
+        cursor = self.db.delete_client_db(name)
+
+        if cursor.rowcount == 0:
+            return False, f'Client "{name}" not found.'
+        
+        return True, f'Client "{name}" deleted successfully.'
