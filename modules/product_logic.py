@@ -122,7 +122,39 @@ class ProductLogic:
         
         except sqlite3.IntegrityError:
             return False, 'Error: Name {} already exists.'.format(final_name)
+
+
+    # Function to manually update stock
+    def manual_update_stock(self, product_name, new_stock):
+
+        # 1. Validation
+        try:
+            new_stock = int(new_stock)
+            
+            if new_stock < 0:
+                return False, 'Stock quantity cannot be negative.'
+            
+        except ValueError:
+
+            return False, 'Stock must be a valid integer number.'
         
+        # 2. Get Product ID
+        res = self.db.search_product_db(product_name)
+        product = res.fetchone()
+
+        if not product:
+            return False, 'Product not found.'
+
+        prod_id = product[0] 
+
+        # 3. Update stock in DB
+        try:
+            self.db.update_product_stock_db(prod_id, new_stock)
+            return True, f'Stock for product "{product_name}" successfully updated to {new_stock}.'
+        
+        except Exception as e:
+
+            return False, f'Error updating stock: {e}'
     
     # -- CATEGORIES -- 
     # Get all categories function

@@ -90,7 +90,21 @@ class Products:
         ttk.Button(btns_frame, text='DELETE', command=self.delete_product).pack(side=LEFT, fill=X, expand=True, padx=2)
         ttk.Button(btns_frame, text='EDIT', command=self.edit_product).pack(side=LEFT, fill=X, expand=True, padx=2)        
     
-        # 6. SEARCH BAR
+        # 6. Stock Adjustment Widget
+        self.stock_frame = LabelFrame(left_frame, text='Adjust Stock')
+        self.stock_frame.pack(anchor='nw', padx=5, pady=5)
+
+        Label(self.stock_frame, text='New Stock:').grid(row=0, column=0, padx=5, pady=5)
+        self.stock_spinbox = Spinbox(self.stock_frame, from_=0, to=99999, width=10)
+        self.stock_spinbox.grid(row=0, column=1, padx=5, pady=5)
+
+        self.btn_update_stock = Button(self.stock_frame, text='Update Stock', command=self.update_stock_handler)
+        self.btn_update_stock.grid(row=0, column=2, padx=5, pady=5)
+
+        self.stock_msg = Label(self.stock_frame, text='', fg='black')
+        self.stock_msg.grid(row=1, columnspan=3, pady=5)
+
+        # 7. SEARCH BAR
 
         self.search_panel = SearchForm(left_frame)
         self.search_panel.pack(anchor=W, padx=5, pady=10)
@@ -353,6 +367,44 @@ class Products:
 
         # 3. Pass the lista of names to the SalesPanel component
         self.sales_panel.load_products(product_names)
+
+
+    # Function to create a handler for manually updating product stock
+    def update_stock_handler(self):
+
+        # 1. Clear previous message
+        self.stock_msg.config(text='', fg='black')
+
+        # 2. Get selected product name
+        item_id = self.tree.focus()
+        
+        if not item_id:
+            self.stock_msg.config(text='Please select a product first.', fg='red')
+            return
+        
+        product_name = self.tree.item(item_id, 'text') # Product name is the first column
+
+        # 3. Get the new stock value
+        new_stock = self.stock_spinbox.get()
+
+        # 4. Confirmation
+        if not messagebox.askyesno('Confirm stock update',f'Are you sure you want to change the stock for "{product_name}" to {new_stock}?'):
+
+            return
+        
+        # 5. Call Logic
+        success, message = self.logic.manual_update_stock(product_name, new_stock)
+
+        # 6. Update UI feedback and table
+        self.stock_msg.config(text=message, fg='green' if success else 'red')
+
+        if success:
+
+            self.get_products()
+            self.refresh_sales_products() # It is optional but i added it to update the sales panel
+            self.stock_spinbox.delete(0, END)
+            self.stock_spinbox.insert(0, 0)
+
 
 
 
