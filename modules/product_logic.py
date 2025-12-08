@@ -156,6 +156,42 @@ class ProductLogic:
 
             return False, f'Error updating stock: {e}'
     
+
+    # Function to filter the products depends of the search.
+    def filter_products(self, category_name, only_active):
+
+        # Case 1: If exists the selected category (which is not 'All')
+        if category_name and category_name != 'All':
+
+            # Get the Category_ID
+            res = self.db.get_category_id_by_name_db(category_name)
+            cat_data = res.fetchone()
+
+            if cat_data:
+
+                cat_id = cat_data[0]
+
+                # If we want only active too
+                if only_active:
+                    
+                    return self.db.get_active_products_by_category_db(cat_id)
+                
+                else:
+
+                    return self.db.get_products_by_category_db(cat_id)
+                
+        
+        # Case 2: Without any specific category (All the categories)
+        else:
+            
+            if only_active:
+
+                return self.db.get_active_products_db()
+            
+            else:
+
+                return self.db.get_products_db() # Return everything
+
     # -- CATEGORIES -- 
     # Get all categories function
     def get_all_categories(self):

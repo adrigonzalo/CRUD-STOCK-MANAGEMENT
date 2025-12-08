@@ -133,6 +133,25 @@ class DatabaseManager:
         parameters = (new_name, new_price, old_name) 
         self.run_query(query, parameters)
 
+    # Function to get products filtered by Category ID
+    def get_products_by_category_db(self, category_id):
+        
+        query = 'SELECT * FROM products WHERE category_id = ? ORDER BY name DESC'
+        return self.run_query(query, (category_id,))
+    
+    # Function to get only actives products (Stock > 0)
+    def get_active_products_db(self):
+
+        query = 'SELECT * FROM products WHERE stock > 0 ORDER BY name DESC'
+        return self.run_query(query)
+    
+    # Function to get active products filtered by Category
+    def get_active_products_by_category_db(self, category_id):
+
+        query = 'SELECT * FROM products WHERE category_id = ? AND stock > 0 ORDER BY name DESC'
+        return self.run_query(query, (category_id,))
+    
+
 # -- CATEGORIES -- 
         
     # Get category function. Get the category id by name.

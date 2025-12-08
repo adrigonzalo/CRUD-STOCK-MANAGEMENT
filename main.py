@@ -72,10 +72,25 @@ class Products:
         self.message.pack(pady=5)
 
         # 3. Checkbutton Widget (Filter)
-        self.show_active_var = IntVar(value = 1)
-        self.check_active = Checkbutton(left_frame, text='Show only active products', variable=self.show_active_var, command=self.get_products)
-        self.check_active.pack(pady=5)
+        self.filters_frame = LabelFrame(left_frame, text='Filters')
+        self.filters_frame.pack(fill=X, padx=5, pady=5)
 
+        # Filter by Category
+        Label(self.filters_frame, text='Category:').pack(side=LEFT, padx=5)
+        self.filter_category_combo = ttk.Combobox(self.filters_frame, state='readonly')
+        self.filter_category_combo.pack(side=LEFT, padx=5)
+        self.filter_category_combo.bind('<<ComboboxSelected>>', self.apply_filters)
+
+        # Filter by Active (Stock > 0)
+        self.show_active_var = IntVar(value = 0) # value=0 means that we start with the checkbutton unchecked to see all registers
+        self.check_active = Checkbutton(self.filters_frame, text='Only Active products (Stock > 0)', variable=self.show_active_var, command=self.apply_filters)
+        self.check_active.pack(pady=5)
+        self.check_active.pack(side=LEFT, padx=10)
+
+        # Reset Filters Button
+        Button(self.filters_frame, text='Reset', command=self.reset_filter, font=('Arial', 8)).pack(side=RIGHT, padx=5)
+        
+        
         # 4. Treeview / Table
         self.tree = ProductTree(left_frame)
         self.tree.pack(fill=BOTH, expand=True, padx=5, pady=5)
@@ -142,6 +157,9 @@ class Products:
 
         # Menubar call
         self.create_menu_bar()
+
+        # Load the Filter Combobox with data
+        self.load_filter_categories()
 
     # -- CONTROLLERS: CONNECTING UI EVENTS TO THE BUSSINESS LOGIC --
 
@@ -482,6 +500,10 @@ class Products:
     # Function to close the category window and refresh the combobox in the main form.
     def close_category_window(self):
         self.form.load_categories()
+
+        # If we add a new category using the Management menu, the filter also should know it.
+        self.load_filter_categories()
+
         self.cat_window.destroy()
 
     
@@ -535,6 +557,43 @@ class Products:
 
             if success:
                 self.get_categories_in_window()
+
+
+    # Function to load categories into the filter combobox
+    def load_filter_categories(self):
+
+        categories = self.logic.get_categories()
+
+        categories.insert(0, 'All')
+        self.filter_category_combo['values'] = categories
+        self.filter_category_combo.current(0) # Select 'All' by default
+
+    
+    # Function to apply filters handler
+    def apply_filters(self, event=None):
+
+        # 1. Get values
+        category = self.filter_category_combo.get()
+        only_active = self.show_active_var.get()
+
+        # 2. Call the logic
+        db_rows = self.logic.filter_products(category, only_active)
+
+        # 3. Update table
+        self.tree.clean_rows()
+        
+        for row in db_rows:
+            category_id = row[5] if len(row) > 5 else 1
+            self.tree.add_row(name=row[1], price=row[2], stock=row[3], category_id=category_id)
+
+
+    # Function to reset filters
+    def reset_filter(self):
+
+        self.filter_category_combo.current(0)
+        self.show_active_var.set(0) # Uncheck values
+        self.apply_filters()
+
 
     # Manage suppliers
     def manage_suppliers(self):
