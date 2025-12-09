@@ -50,7 +50,7 @@ class ProductLogic:
         try:
             price_value = float(price)
         except ValueError as ve:
-            print(ve)
+
             return False, 'Price input must be a valid number.'
         
         # Validate if price input has a positive value
@@ -102,8 +102,6 @@ class ProductLogic:
             return True, '{} had been deleted successfully.'.format(name)
         
         except Exception as e:
-
-            print('Error: ', e)
 
             # Adding that, we can make sure that you cant try to delete anything in the database if the selection failed.
             return False, '{} doesnt exists.'.format(name)

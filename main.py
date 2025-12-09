@@ -274,9 +274,6 @@ class Products:
         old_name = selected_item[0] # name
         old_price = selected_item[1] # price
 
-        # Print old variables.
-        print("Old name: ", old_name, "Old_price: ", old_price)
-
         # Using Tkinter to use an independent window for update a record.
         self.edit_wind = Toplevel()
         self.edit_wind.title = 'Edit Product'
@@ -305,9 +302,6 @@ class Products:
         
     # Edit records function
     def edit_records(self, new_name, new_price, old_name, old_price):
-        
-        # Print records in the terminal before the update
-        print(new_name, new_price, old_name)
 
         # UI logic: If the new values are empty, we need to use the old ones.
         final_name = new_name if new_name else old_name

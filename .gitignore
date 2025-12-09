@@ -1,0 +1,3 @@
+# Adding **/ means that doesnt care where this folder, file, expression, etc are. It is not going to be included in the commit
+**__pycache__/
+**build/

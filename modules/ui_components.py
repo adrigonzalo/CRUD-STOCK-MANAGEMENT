@@ -154,7 +154,6 @@ class ProductTree(ttk.Treeview):
              return name, price, stock, category_id
         
         except IndexError as ie:
-             print('Error: ',ie)
              return None
   
 # CATEGORY MANAGER WINDOW
